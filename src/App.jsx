@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { db } from './firebase'
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { collection, addDoc, getDocs, orderBy, query } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
+const auth = getAuth()
 const CLOUD_NAME = "dg4dwedsi"
 const UPLOAD_PRESET = "kodi254_preset"
 
@@ -54,6 +56,49 @@ function ListingCard({ listing }) {
   )
 }
 
+function AuthPage({ onAuth }) {
+  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      if (mode === 'login') {
+        await signInWithEmailAndPassword(auth, email, password)
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password)
+      }
+      onAuth()
+    } catch (e) {
+      setError(e.message.replace('Firebase: ', ''))
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-md">
+        <h1 className="text-2xl font-bold text-green-700 text-center mb-2">🏠 Kodi254</h1>
+        <p className="text-gray-500 text-center text-sm mb-6">Landlord Portal</p>
+        <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+          <button onClick={() => setMode('login')} className={mode === 'login' ? 'flex-1 py-2 rounded-lg bg-white font-medium text-green-700 shadow-sm' : 'flex-1 py-2 rounded-lg text-gray-500'}>Login</button>
+          <button onClick={() => setMode('register')} className={mode === 'register' ? 'flex-1 py-2 rounded-lg bg-white font-medium text-green-700 shadow-sm' : 'flex-1 py-2 rounded-lg text-gray-500'}>Register</button>
+        </div>
+        {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+        <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
+        <button onClick={handleSubmit} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
+          {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [page, setPage] = useState('home')
   const [search, setSearch] = useState('')
@@ -65,6 +110,15 @@ export default function App() {
   const [images, setImages] = useState([])
   const [previews, setPreviews] = useState([])
   const [uploadProgress, setUploadProgress] = useState('')
+  const [user, setUser] = useState(null)
+  const [authChecked, setAuthChecked] = useState(false)
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (u) => {
+      setUser(u)
+      setAuthChecked(true)
+    })
+  }, [])
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -101,7 +155,6 @@ export default function App() {
     try {
       let imageUrls = []
       if (images.length > 0) {
-        setUploadProgress('Uploading photos...')
         for (let i = 0; i < images.length; i++) {
           setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...')
           const url = await uploadImage(images[i])
@@ -117,7 +170,8 @@ export default function App() {
         phone: form.phone,
         description: form.description,
         images: imageUrls,
-        createdAt: new Date()
+        createdAt: new Date(),
+        landlordEmail: user.email
       }
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings([{ id: docRef.id, ...newListing }, ...listings])
@@ -143,19 +197,31 @@ export default function App() {
     </button>
   )
 
+  if (!authChecked) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-green-700 text-white p-4 text-center shadow-md">
         <h1 className="text-3xl font-bold">🏠 Kodi254</h1>
         <p className="text-green-200 text-sm mb-3">Find your perfect home in Kenya</p>
-        <div className="flex justify-center gap-2">
+        <div className="flex justify-center gap-2 flex-wrap">
           {navBtn('home', 'Home')}
           {navBtn('search', 'Search')}
-          {navBtn('list', 'List a House')}
+          {user ? (
+            <>
+              {navBtn('list', 'List a House')}
+              <button onClick={() => signOut(auth)} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white">Logout</button>
+            </>
+          ) : (
+            <button onClick={() => setPage('auth')} className="px-4 py-2 rounded-lg text-sm font-medium bg-yellow-500 text-white">Landlord Login</button>
+          )}
         </div>
+        {user && <p className="text-green-200 text-xs mt-1">Logged in as {user.email}</p>}
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
+
+        {page === 'auth' && <AuthPage onAuth={() => setPage('list')} />}
 
         {page === 'home' && (
           <div className="text-center py-12">
@@ -164,7 +230,7 @@ export default function App() {
             <p className="text-gray-500 mb-8">Connecting tenants with landlords across Kenya</p>
             <div className="flex justify-center gap-4">
               <button onClick={() => setPage('search')} className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold">🔍 Find a House</button>
-              <button onClick={() => setPage('list')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold">➕ List Your House</button>
+              <button onClick={() => setPage(user ? 'list' : 'auth')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold">➕ List Your House</button>
             </div>
             <div className="mt-10 grid grid-cols-3 gap-4 text-center">
               <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -204,7 +270,9 @@ export default function App() {
           </div>
         )}
 
-        {page === 'list' && (
+        {page === 'list' && !user && <AuthPage onAuth={() => setPage('list')} />}
+
+        {page === 'list' && user && (
           <div className="py-4">
             <h2 className="text-xl font-bold text-gray-800 mb-4">List Your House</h2>
             {submitted && <div className="bg-green-100 text-green-700 px-4 py-3 rounded-xl mb-4 font-medium">Listing saved! Redirecting...</div>}
@@ -220,10 +288,9 @@ export default function App() {
               </select>
               <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="WhatsApp number e.g. 0712345678" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
               <textarea className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400 h-24" placeholder="Description of the house..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-              
               <div className="mb-4">
                 <label className="block text-gray-700 font-medium mb-2">📸 Upload House Photos (max 5)</label>
-                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none" />
+                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="w-full border border-gray-300 rounded-lg px-4 py-3" />
                 {previews.length > 0 && (
                   <div className="flex gap-2 mt-3 overflow-x-auto">
                     {previews.map((p, i) => (
@@ -232,9 +299,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-
               {uploadProgress && <p className="text-blue-600 text-sm mb-3">{uploadProgress}</p>}
-              
               <button onClick={handleSubmit} disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
                 {submitting ? 'Please wait...' : 'Submit Listing'}
               </button>
