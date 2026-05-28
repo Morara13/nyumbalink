@@ -2,12 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyDCpFIDAPoSGm_esy8TmgkocAlfmPhLcdM",
+  authDomain: "nyumbalink-aa9e5.firebaseapp.com",
+  projectId: "nyumbalink-aa9e5",
+  storageBucket: "nyumbalink-aa9e5.firebasestorage.app",
+  messagingSenderId: "471702228280",
+  appId: "1:471702228280:web:7770f661d02a887e8485cd"
 };
 
 const app = initializeApp(firebaseConfig);
