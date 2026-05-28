@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css'
 const auth = getAuth()
 const CLOUD_NAME = "dg4dwedsi"
 const UPLOAD_PRESET = "kodi254_preset"
+const MPESA_NUMBER = "0724380481" // Replace with your real M-Pesa number
 
 async function uploadImage(file) {
   const formData = new FormData()
@@ -21,12 +22,135 @@ async function uploadImage(file) {
   return data.secure_url
 }
 
-function ListingCard({ listing }) {
-  const waLink = "https://wa.me/254" + listing.phone.substring(1) + "?text=Hi, I am interested in your listing: " + listing.title + " in " + listing.location
-  const position = [-0.6831, 37.0]
+function PaymentModal({ listing, onClose }) {
   const isAirbnb = listing.type === 'airbnb'
+  const fee = isAirbnb ? listing.price : 250
+  const [step, setStep] = useState(1)
+  const [code, setCode] = useState('')
+  const [mpesa, setMpesa] = useState('')
+
+  const waLink = "https://wa.me/254" + MPESA_NUMBER.substring(1) + "?text=Hi Kodi254, I have paid KES " + fee + " for listing: " + listing.title + " in " + listing.location + ". My M-Pesa code is: " + code
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-gray-800">{isAirbnb ? 'Book Now' : 'Request Viewing'}</h3>
+          <button onClick={onClose} className="text-gray-500 text-xl font-bold">✕</button>
+        </div>
+        {step === 1 && (
+          <div>
+            <div className="bg-green-50 rounded-xl p-4 mb-4">
+              <p className="text-green-800 font-semibold text-lg mb-1">{listing.title}</p>
+              <p className="text-gray-600 text-sm">📍 {listing.location}</p>
+              <p className="text-gray-600 text-sm">🛏 {listing.bedrooms} Bedroom(s)</p>
+              {isAirbnb ? (
+                <p className="text-orange-600 font-bold mt-2">KES {listing.price.toLocaleString()}/night</p>
+              ) : (
+                <p className="text-green-700 font-bold mt-2">Viewing Fee: KES 250</p>
+              )}
+            </div>
+            <div className="bg-blue-50 rounded-xl p-4 mb-4">
+              <p className="text-blue-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
+              <p className="text-gray-700 text-sm mb-1">1. Go to M-Pesa on your phone</p>
+              <p className="text-gray-700 text-sm mb-1">2. Select <strong>Send Money</strong></p>
+              <p className="text-gray-700 text-sm mb-1">3. Send <strong>KES {fee}</strong> to:</p>
+              <p className="text-2xl font-bold text-blue-700 text-center my-2">{MPESA_NUMBER}</p>
+              <p className="text-gray-700 text-sm">4. Save your M-Pesa confirmation code</p>
+            </div>
+            <button onClick={() => setStep(2)} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
+          </div>
+        )}
+        {step === 2 && (
+          <div>
+            <p className="text-gray-600 mb-4">Enter your M-Pesa confirmation code:</p>
+            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
+            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Your M-Pesa number e.g. 0712345678" value={mpesa} onChange={e => setMpesa(e.target.value)} />
+            <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold block text-center mb-3">
+              📱 Send Payment Proof on WhatsApp
+            </a>
+            <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold">Skip — I will send manually</button>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">⏳</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Under Review</h3>
+            <p className="text-gray-500 mb-4">We will verify your payment and send the landlord contact details to your WhatsApp within <strong>30 minutes</strong>.</p>
+            <div className="bg-yellow-50 rounded-xl p-4 mb-4">
+              <p className="text-yellow-800 text-sm">For faster verification, send your M-Pesa screenshot to:</p>
+              <p className="text-yellow-800 font-bold mt-1">{MPESA_NUMBER}</p>
+            </div>
+            <button onClick={onClose} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
+  const fee = listingType === 'airbnb' ? 500 : 300
+  const [step, setStep] = useState(1)
+  const [code, setCode] = useState('')
+
+  const waLink = "https://wa.me/254" + MPESA_NUMBER.substring(1) + "?text=Hi Kodi254, I have paid KES " + fee + " listing fee. My M-Pesa code is: " + code
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-gray-800">Listing Payment</h3>
+          <button onClick={onClose} className="text-gray-500 text-xl font-bold">✕</button>
+        </div>
+        {step === 1 && (
+          <div>
+            <div className="bg-blue-50 rounded-xl p-4 mb-4">
+              <p className="text-blue-800 font-semibold mb-1">Listing Fee</p>
+              <p className="text-gray-600 text-sm mb-2">{listingType === 'airbnb' ? 'Short Stay listing — 30 days' : 'Rental listing — 30 days'}</p>
+              <p className="text-3xl font-bold text-blue-700">KES {fee}</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-4 mb-4">
+              <p className="text-green-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
+              <p className="text-gray-700 text-sm mb-1">1. Go to M-Pesa → Send Money</p>
+              <p className="text-gray-700 text-sm mb-1">2. Send <strong>KES {fee}</strong> to:</p>
+              <p className="text-2xl font-bold text-green-700 text-center my-2">{MPESA_NUMBER}</p>
+              <p className="text-gray-700 text-sm">3. Save your confirmation code</p>
+            </div>
+            <button onClick={() => setStep(2)} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
+          </div>
+        )}
+        {step === 2 && (
+          <div>
+            <p className="text-gray-600 mb-4">Enter your M-Pesa confirmation code:</p>
+            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
+            <a href={waLink} target="_blank" rel="noreferrer" className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold block text-center mb-3" onClick={() => setStep(3)}>
+              📱 Send Payment Proof on WhatsApp
+            </a>
+            <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold">Skip — Submit listing anyway</button>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">✅</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Submitted!</h3>
+            <p className="text-gray-500 mb-4">Your listing will go live after we verify your payment within <strong>30 minutes</strong>.</p>
+            <button onClick={onSuccess} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">Submit My Listing</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ListingCard({ listing }) {
+  const [showPayment, setShowPayment] = useState(false)
+  const isAirbnb = listing.type === 'airbnb'
+  const position = [-0.6831, 37.0]
+
   return (
     <div className="bg-white rounded-xl shadow-md mb-4 border border-gray-100 overflow-hidden">
+      {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
       {listing.images && listing.images.length > 0 && (
         <div className="flex overflow-x-auto gap-2 p-2 bg-gray-50">
           {listing.images.map((img, i) => (
@@ -56,11 +180,13 @@ function ListingCard({ listing }) {
           <p className="text-green-800 font-semibold mb-1">💰 KES {listing.price.toLocaleString()}/month</p>
         )}
         <p className="text-gray-500 text-sm mb-3">{listing.description}</p>
-        <a href={waLink} target="_blank" rel="noreferrer"
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium inline-block mb-3">
-          📱 Contact on WhatsApp
-        </a>
-        <div style={{ height: '150px', borderRadius: '8px', overflow: 'hidden' }}>
+        <div className="bg-yellow-50 rounded-lg px-3 py-2 mb-3 text-sm text-yellow-800">
+          🔒 Contact revealed after payment verification
+        </div>
+        <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium" : "w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium"}>
+          {isAirbnb ? '🏨 Book Now — KES ' + listing.price.toLocaleString() + '/night' : '🔍 Request Viewing — KES 250'}
+        </button>
+        <div style={{ height: '150px', borderRadius: '8px', overflow: 'hidden', marginTop: '12px' }}>
           <MapContainer center={position} zoom={6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <Marker position={position}>
@@ -131,6 +257,7 @@ export default function App() {
   const [uploadProgress, setUploadProgress] = useState('')
   const [user, setUser] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [showLandlordPayment, setShowLandlordPayment] = useState(false)
 
   const amenityOptions = ['WiFi', 'Parking', 'Kitchen', 'TV', 'AC', 'Washer', 'Pool', 'Gym', 'Security', 'Water', 'Generator']
 
@@ -177,6 +304,11 @@ export default function App() {
       alert('Please fill all required fields!')
       return
     }
+    setShowLandlordPayment(true)
+  }
+
+  const submitListing = async () => {
+    setShowLandlordPayment(false)
     setSubmitting(true)
     try {
       let imageUrls = []
@@ -199,7 +331,8 @@ export default function App() {
         amenities: form.type === 'airbnb' ? amenities : [],
         images: imageUrls,
         createdAt: new Date(),
-        landlordEmail: user.email
+        landlordEmail: user.email,
+        status: 'pending'
       }
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings([{ id: docRef.id, ...newListing }, ...listings])
@@ -227,6 +360,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {showLandlordPayment && (
+        <LandlordPaymentModal
+          listingType={form.type}
+          onSuccess={submitListing}
+          onClose={() => setShowLandlordPayment(false)}
+        />
+      )}
       <div className="bg-green-700 text-white p-4 text-center shadow-md">
         <h1 className="text-3xl font-bold">🏠 Kodi254</h1>
         <p className="text-green-200 text-sm mb-3">Find your perfect home in Kenya</p>
@@ -302,14 +442,17 @@ export default function App() {
         {page === 'list' && user && (
           <div className="py-4">
             <h2 className="text-xl font-bold text-gray-800 mb-4">List Your Property</h2>
-            {submitted && <div className="bg-green-100 text-green-700 px-4 py-3 rounded-xl mb-4 font-medium">Listing saved! Redirecting...</div>}
+            <div className="bg-yellow-50 rounded-xl p-4 mb-4">
+              <p className="text-yellow-800 font-medium">💡 Listing Fees</p>
+              <p className="text-yellow-700 text-sm">Rental listing — KES 300 | Short stay listing — KES 500</p>
+              <p className="text-yellow-700 text-sm">Payment required before listing goes live</p>
+            </div>
+            {submitted && <div className="bg-green-100 text-green-700 px-4 py-3 rounded-xl mb-4 font-medium">Listing submitted! Redirecting...</div>}
             <div className="bg-white rounded-xl shadow-md p-5">
-
               <div className="flex gap-2 mb-4">
                 <button onClick={() => setForm({ ...form, type: 'rental' })} className={form.type === 'rental' ? 'flex-1 py-3 rounded-lg bg-green-600 text-white font-medium' : 'flex-1 py-3 rounded-lg bg-gray-100 text-gray-600 font-medium'}>🏠 Long Stay Rental</button>
                 <button onClick={() => setForm({ ...form, type: 'airbnb' })} className={form.type === 'airbnb' ? 'flex-1 py-3 rounded-lg bg-orange-500 text-white font-medium' : 'flex-1 py-3 rounded-lg bg-gray-100 text-gray-600 font-medium'}>🏨 Short Stay</button>
               </div>
-
               <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Property title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
               <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Location/Town" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
               <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder={form.type === 'airbnb' ? 'Price per night (KES)' : 'Rent per month (KES)'} type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
@@ -319,9 +462,8 @@ export default function App() {
                 <option value="3">3 Bedrooms</option>
                 <option value="4">4+ Bedrooms</option>
               </select>
-              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="WhatsApp number e.g. 0712345678" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Your WhatsApp number e.g. 0712345678" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
               <textarea className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400 h-24" placeholder="Description..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-
               {form.type === 'airbnb' && (
                 <div className="mb-4">
                   <label className="block text-gray-700 font-medium mb-2">Amenities</label>
@@ -334,7 +476,6 @@ export default function App() {
                   </div>
                 </div>
               )}
-
               <div className="mb-4">
                 <label className="block text-gray-700 font-medium mb-2">📸 Upload Photos (max 5)</label>
                 <input type="file" accept="image/*" multiple onChange={handleImageChange} className="w-full border border-gray-300 rounded-lg px-4 py-3" />
@@ -346,10 +487,9 @@ export default function App() {
                   </div>
                 )}
               </div>
-
               {uploadProgress && <p className="text-blue-600 text-sm mb-3">{uploadProgress}</p>}
               <button onClick={handleSubmit} disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
-                {submitting ? 'Please wait...' : 'Submit Listing'}
+                {submitting ? 'Please wait...' : 'Proceed to Payment — KES ' + (form.type === 'airbnb' ? '500' : '300')}
               </button>
             </div>
           </div>
