@@ -6,9 +6,9 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const auth = getAuth()
-const CLOUD_NAME = "dg4dwedsi"
-const UPLOAD_PRESET = "kodi254_preset"
-const MPESA_NUMBER = "0724380481"
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+const MPESA_NUMBER = import.meta.env.VITE_MPESA_NUMBER
 
 async function uploadImage(file) {
   const formData = new FormData()
