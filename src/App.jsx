@@ -99,7 +99,6 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
               <p className="text-gray-700 text-sm mb-1">Send <strong>KES {fee}</strong> to:</p>
               <p className="text-2xl font-bold text-green-700 text-center my-2">{MPESA_NUMBER}</p>
             </div>
-            <button onClick={() => setStep(2)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
           </div>
         )}
         {step === 2 && (
