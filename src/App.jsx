@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { db } from './firebase'
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import { collection, addDoc, getDocs, orderBy, query } from 'firebase/firestore'
+import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc, where } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const auth = getAuth()
 const CLOUD_NAME = "dg4dwedsi"
 const UPLOAD_PRESET = "kodi254_preset"
-const MPESA_NUMBER = "0724380481" // Replace with your real M-Pesa number
+const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
   const formData = new FormData()
@@ -28,9 +28,7 @@ function PaymentModal({ listing, onClose }) {
   const [step, setStep] = useState(1)
   const [code, setCode] = useState('')
   const [mpesa, setMpesa] = useState('')
-
   const waLink = "https://wa.me/254" + MPESA_NUMBER.substring(1) + "?text=Hi Kodi254, I have paid KES " + fee + " for listing: " + listing.title + " in " + listing.location + ". My M-Pesa code is: " + code
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
@@ -44,43 +42,31 @@ function PaymentModal({ listing, onClose }) {
               <p className="text-green-800 font-semibold text-lg mb-1">{listing.title}</p>
               <p className="text-gray-600 text-sm">📍 {listing.location}</p>
               <p className="text-gray-600 text-sm">🛏 {listing.bedrooms} Bedroom(s)</p>
-              {isAirbnb ? (
-                <p className="text-orange-600 font-bold mt-2">KES {listing.price.toLocaleString()}/night</p>
-              ) : (
-                <p className="text-green-700 font-bold mt-2">Viewing Fee: KES 250</p>
-              )}
+              {isAirbnb ? <p className="text-orange-600 font-bold mt-2">KES {listing.price.toLocaleString()}/night</p> : <p className="text-green-700 font-bold mt-2">Viewing Fee: KES 250</p>}
             </div>
             <div className="bg-blue-50 rounded-xl p-4 mb-4">
               <p className="text-blue-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
-              <p className="text-gray-700 text-sm mb-1">1. Go to M-Pesa on your phone</p>
-              <p className="text-gray-700 text-sm mb-1">2. Select <strong>Send Money</strong></p>
-              <p className="text-gray-700 text-sm mb-1">3. Send <strong>KES {fee}</strong> to:</p>
+              <p className="text-gray-700 text-sm mb-1">1. Go to M-Pesa → Send Money</p>
+              <p className="text-gray-700 text-sm mb-1">2. Send <strong>KES {fee}</strong> to:</p>
               <p className="text-2xl font-bold text-blue-700 text-center my-2">{MPESA_NUMBER}</p>
-              <p className="text-gray-700 text-sm">4. Save your M-Pesa confirmation code</p>
+              <p className="text-gray-700 text-sm">3. Save your confirmation code</p>
             </div>
             <button onClick={() => setStep(2)} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
           </div>
         )}
         {step === 2 && (
           <div>
-            <p className="text-gray-600 mb-4">Enter your M-Pesa confirmation code:</p>
-            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
-            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Your M-Pesa number e.g. 0712345678" value={mpesa} onChange={e => setMpesa(e.target.value)} />
-            <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold block text-center mb-3">
-              📱 Send Payment Proof on WhatsApp
-            </a>
-            <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold">Skip — I will send manually</button>
+            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa code e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
+            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Your M-Pesa number" value={mpesa} onChange={e => setMpesa(e.target.value)} />
+            <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold block text-center mb-3">📱 Send Payment Proof on WhatsApp</a>
+            <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold">Skip</button>
           </div>
         )}
         {step === 3 && (
           <div className="text-center">
             <div className="text-5xl mb-4">⏳</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Under Review</h3>
-            <p className="text-gray-500 mb-4">We will verify your payment and send the landlord contact details to your WhatsApp within <strong>30 minutes</strong>.</p>
-            <div className="bg-yellow-50 rounded-xl p-4 mb-4">
-              <p className="text-yellow-800 text-sm">For faster verification, send your M-Pesa screenshot to:</p>
-              <p className="text-yellow-800 font-bold mt-1">{MPESA_NUMBER}</p>
-            </div>
+            <h3 className="text-xl font-bold mb-2">Payment Under Review</h3>
+            <p className="text-gray-500 mb-4">We will send landlord contact to your WhatsApp within <strong>30 minutes</strong>.</p>
             <button onClick={onClose} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">Done</button>
           </div>
         )}
@@ -93,48 +79,41 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
   const fee = listingType === 'airbnb' ? 500 : 300
   const [step, setStep] = useState(1)
   const [code, setCode] = useState('')
-
   const waLink = "https://wa.me/254" + MPESA_NUMBER.substring(1) + "?text=Hi Kodi254, I have paid KES " + fee + " listing fee. My M-Pesa code is: " + code
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Listing Payment</h3>
+          <h3 className="text-lg font-bold">Listing Payment</h3>
           <button onClick={onClose} className="text-gray-500 text-xl font-bold">✕</button>
         </div>
         {step === 1 && (
           <div>
             <div className="bg-blue-50 rounded-xl p-4 mb-4">
               <p className="text-blue-800 font-semibold mb-1">Listing Fee</p>
-              <p className="text-gray-600 text-sm mb-2">{listingType === 'airbnb' ? 'Short Stay listing — 30 days' : 'Rental listing — 30 days'}</p>
+              <p className="text-gray-600 text-sm mb-2">{listingType === 'airbnb' ? 'Short Stay — 30 days' : 'Rental — 30 days'}</p>
               <p className="text-3xl font-bold text-blue-700">KES {fee}</p>
             </div>
             <div className="bg-green-50 rounded-xl p-4 mb-4">
               <p className="text-green-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
-              <p className="text-gray-700 text-sm mb-1">1. Go to M-Pesa → Send Money</p>
-              <p className="text-gray-700 text-sm mb-1">2. Send <strong>KES {fee}</strong> to:</p>
+              <p className="text-gray-700 text-sm mb-1">Send <strong>KES {fee}</strong> to:</p>
               <p className="text-2xl font-bold text-green-700 text-center my-2">{MPESA_NUMBER}</p>
-              <p className="text-gray-700 text-sm">3. Save your confirmation code</p>
             </div>
-            <button onClick={() => setStep(2)} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
+            <button onClick={() => setStep(2)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
           </div>
         )}
         {step === 2 && (
           <div>
-            <p className="text-gray-600 mb-4">Enter your M-Pesa confirmation code:</p>
-            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
-            <a href={waLink} target="_blank" rel="noreferrer" className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold block text-center mb-3" onClick={() => setStep(3)}>
-              📱 Send Payment Proof on WhatsApp
-            </a>
-            <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold">Skip — Submit listing anyway</button>
+            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa code e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
+            <a href={waLink} target="_blank" rel="noreferrer" className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold block text-center mb-3" onClick={() => setStep(3)}>📱 Send Payment Proof</a>
+            <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold">Skip</button>
           </div>
         )}
         {step === 3 && (
           <div className="text-center">
             <div className="text-5xl mb-4">✅</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Submitted!</h3>
-            <p className="text-gray-500 mb-4">Your listing will go live after we verify your payment within <strong>30 minutes</strong>.</p>
+            <h3 className="text-xl font-bold mb-2">Payment Submitted!</h3>
+            <p className="text-gray-500 mb-4">Your listing goes live after payment verification.</p>
             <button onClick={onSuccess} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">Submit My Listing</button>
           </div>
         )}
@@ -147,54 +126,94 @@ function ListingCard({ listing }) {
   const [showPayment, setShowPayment] = useState(false)
   const isAirbnb = listing.type === 'airbnb'
   const position = [-0.6831, 37.0]
-
   return (
     <div className="bg-white rounded-xl shadow-md mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
       {listing.images && listing.images.length > 0 && (
         <div className="flex overflow-x-auto gap-2 p-2 bg-gray-50">
-          {listing.images.map((img, i) => (
-            <img key={i} src={img} alt="house" className="h-40 w-56 object-cover rounded-lg flex-shrink-0" />
-          ))}
+          {listing.images.map((img, i) => <img key={i} src={img} alt="house" className="h-40 w-56 object-cover rounded-lg flex-shrink-0" />)}
         </div>
       )}
       <div className="p-5">
         <div className="flex items-center gap-2 mb-2">
           <h3 className="text-xl font-bold text-green-700">{listing.title}</h3>
-          {isAirbnb && <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full font-medium">🏨 Short Stay</span>}
+          {isAirbnb && <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">🏨 Short Stay</span>}
+          {listing.status === 'taken' && <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">❌ Taken</span>}
         </div>
         <p className="text-gray-600 text-sm mb-1">📍 {listing.location}</p>
         <p className="text-gray-600 text-sm mb-1">🛏 {listing.bedrooms} Bedroom(s)</p>
-        {isAirbnb ? (
-          <>
-            <p className="text-orange-600 font-semibold mb-1">💰 KES {listing.price.toLocaleString()}/night</p>
-            {listing.amenities && listing.amenities.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {listing.amenities.map((a, i) => (
-                  <span key={i} className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">{a}</span>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-green-800 font-semibold mb-1">💰 KES {listing.price.toLocaleString()}/month</p>
+        {isAirbnb ? <p className="text-orange-600 font-semibold mb-1">💰 KES {listing.price.toLocaleString()}/night</p> : <p className="text-green-800 font-semibold mb-1">💰 KES {listing.price.toLocaleString()}/month</p>}
+        {listing.amenities && listing.amenities.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {listing.amenities.map((a, i) => <span key={i} className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">{a}</span>)}
+          </div>
         )}
         <p className="text-gray-500 text-sm mb-3">{listing.description}</p>
-        <div className="bg-yellow-50 rounded-lg px-3 py-2 mb-3 text-sm text-yellow-800">
-          🔒 Contact revealed after payment verification
-        </div>
-        <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium" : "w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium"}>
-          {isAirbnb ? '🏨 Book Now — KES ' + listing.price.toLocaleString() + '/night' : '🔍 Request Viewing — KES 250'}
-        </button>
+        {listing.status !== 'taken' && (
+          <>
+            <div className="bg-yellow-50 rounded-lg px-3 py-2 mb-3 text-sm text-yellow-800">🔒 Contact revealed after payment</div>
+            <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium" : "w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium"}>
+              {isAirbnb ? '🏨 Book Now — KES ' + listing.price.toLocaleString() + '/night' : '🔍 Request Viewing — KES 250'}
+            </button>
+          </>
+        )}
         <div style={{ height: '150px', borderRadius: '8px', overflow: 'hidden', marginTop: '12px' }}>
           <MapContainer center={position} zoom={6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Marker position={position}>
-              <Popup>{listing.title} - {listing.location}</Popup>
-            </Marker>
+            <Marker position={position}><Popup>{listing.title} - {listing.location}</Popup></Marker>
           </MapContainer>
         </div>
       </div>
+    </div>
+  )
+}
+
+function LandlordDashboard({ user, allListings, onUpdate }) {
+  const myListings = allListings.filter(l => l.landlordEmail === user.email)
+
+  const toggleStatus = async (listing) => {
+    const newStatus = listing.status === 'taken' ? 'available' : 'taken'
+    await updateDoc(doc(db, 'listings', listing.id), { status: newStatus })
+    onUpdate()
+  }
+
+  const deleteListing = async (listing) => {
+    if (window.confirm('Delete this listing?')) {
+      await deleteDoc(doc(db, 'listings', listing.id))
+      onUpdate()
+    }
+  }
+
+  return (
+    <div className="py-4">
+      <h2 className="text-xl font-bold text-gray-800 mb-4">My Listings ({myListings.length})</h2>
+      {myListings.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-xl">
+          <div className="text-4xl mb-3">🏠</div>
+          <p className="text-gray-500">You have no listings yet.</p>
+        </div>
+      )}
+      {myListings.map(listing => (
+        <div key={listing.id} className="bg-white rounded-xl shadow-md mb-4 p-4 border border-gray-100">
+          {listing.images && listing.images.length > 0 && (
+            <img src={listing.images[0]} alt="house" className="w-full h-40 object-cover rounded-lg mb-3" />
+          )}
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-green-700">{listing.title}</h3>
+            <span className={listing.status === 'taken' ? 'bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full' : 'bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full'}>
+              {listing.status === 'taken' ? '❌ Taken' : '✅ Available'}
+            </span>
+          </div>
+          <p className="text-gray-600 text-sm mb-1">📍 {listing.location}</p>
+          <p className="text-gray-600 text-sm mb-3">{listing.type === 'airbnb' ? '💰 KES ' + listing.price.toLocaleString() + '/night' : '💰 KES ' + listing.price.toLocaleString() + '/month'}</p>
+          <div className="flex gap-2">
+            <button onClick={() => toggleStatus(listing)} className={listing.status === 'taken' ? 'flex-1 bg-green-100 text-green-700 py-2 rounded-lg text-sm font-medium' : 'flex-1 bg-red-100 text-red-700 py-2 rounded-lg text-sm font-medium'}>
+              {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark as Taken'}
+            </button>
+            <button onClick={() => deleteListing(listing)} className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-medium">🗑 Delete</button>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -268,20 +287,19 @@ export default function App() {
     })
   }, [])
 
-  useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'))
-        const snapshot = await getDocs(q)
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        setListings(data)
-      } catch (e) {
-        console.error(e)
-      }
-      setLoading(false)
+  const fetchListings = async () => {
+    try {
+      const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'))
+      const snapshot = await getDocs(q)
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setListings(data)
+    } catch (e) {
+      console.error(e)
     }
-    fetchListings()
-  }, [])
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchListings() }, [])
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
@@ -332,7 +350,7 @@ export default function App() {
         images: imageUrls,
         createdAt: new Date(),
         landlordEmail: user.email,
-        status: 'pending'
+        status: 'available'
       }
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings([{ id: docRef.id, ...newListing }, ...listings])
@@ -342,9 +360,9 @@ export default function App() {
       setPreviews([])
       setUploadProgress('')
       setSubmitted(true)
-      setTimeout(() => { setSubmitted(false); setPage('search') }, 2000)
+      setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
     } catch (e) {
-      alert('Error saving listing. Please try again.')
+      alert('Error saving listing.')
       console.error(e)
     }
     setSubmitting(false)
@@ -360,13 +378,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {showLandlordPayment && (
-        <LandlordPaymentModal
-          listingType={form.type}
-          onSuccess={submitListing}
-          onClose={() => setShowLandlordPayment(false)}
-        />
-      )}
+      {showLandlordPayment && <LandlordPaymentModal listingType={form.type} onSuccess={submitListing} onClose={() => setShowLandlordPayment(false)} />}
       <div className="bg-green-700 text-white p-4 text-center shadow-md">
         <h1 className="text-3xl font-bold">🏠 Kodi254</h1>
         <p className="text-green-200 text-sm mb-3">Find your perfect home in Kenya</p>
@@ -375,7 +387,8 @@ export default function App() {
           {navBtn('search', 'Search')}
           {user ? (
             <>
-              {navBtn('list', 'List Property')}
+              {navBtn('dashboard', 'My Listings')}
+              {navBtn('list', 'Add Listing')}
               <button onClick={() => signOut(auth)} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white">Logout</button>
             </>
           ) : (
@@ -387,7 +400,9 @@ export default function App() {
 
       <div className="max-w-2xl mx-auto p-4">
 
-        {page === 'auth' && <AuthPage onAuth={() => setPage('list')} />}
+        {page === 'auth' && <AuthPage onAuth={() => setPage('dashboard')} />}
+
+        {page === 'dashboard' && user && <LandlordDashboard user={user} allListings={listings} onUpdate={fetchListings} />}
 
         {page === 'home' && (
           <div className="text-center py-12">
@@ -444,13 +459,12 @@ export default function App() {
             <h2 className="text-xl font-bold text-gray-800 mb-4">List Your Property</h2>
             <div className="bg-yellow-50 rounded-xl p-4 mb-4">
               <p className="text-yellow-800 font-medium">💡 Listing Fees</p>
-              <p className="text-yellow-700 text-sm">Rental listing — KES 300 | Short stay listing — KES 500</p>
-              <p className="text-yellow-700 text-sm">Payment required before listing goes live</p>
+              <p className="text-yellow-700 text-sm">Rental — KES 300 | Short Stay — KES 500 (30 days)</p>
             </div>
             {submitted && <div className="bg-green-100 text-green-700 px-4 py-3 rounded-xl mb-4 font-medium">Listing submitted! Redirecting...</div>}
             <div className="bg-white rounded-xl shadow-md p-5">
               <div className="flex gap-2 mb-4">
-                <button onClick={() => setForm({ ...form, type: 'rental' })} className={form.type === 'rental' ? 'flex-1 py-3 rounded-lg bg-green-600 text-white font-medium' : 'flex-1 py-3 rounded-lg bg-gray-100 text-gray-600 font-medium'}>🏠 Long Stay Rental</button>
+                <button onClick={() => setForm({ ...form, type: 'rental' })} className={form.type === 'rental' ? 'flex-1 py-3 rounded-lg bg-green-600 text-white font-medium' : 'flex-1 py-3 rounded-lg bg-gray-100 text-gray-600 font-medium'}>🏠 Long Stay</button>
                 <button onClick={() => setForm({ ...form, type: 'airbnb' })} className={form.type === 'airbnb' ? 'flex-1 py-3 rounded-lg bg-orange-500 text-white font-medium' : 'flex-1 py-3 rounded-lg bg-gray-100 text-gray-600 font-medium'}>🏨 Short Stay</button>
               </div>
               <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Property title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
@@ -469,9 +483,7 @@ export default function App() {
                   <label className="block text-gray-700 font-medium mb-2">Amenities</label>
                   <div className="flex flex-wrap gap-2">
                     {amenityOptions.map(a => (
-                      <button key={a} onClick={() => toggleAmenity(a)} className={amenities.includes(a) ? 'px-3 py-1 rounded-full bg-orange-500 text-white text-sm' : 'px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm'}>
-                        {a}
-                      </button>
+                      <button key={a} onClick={() => toggleAmenity(a)} className={amenities.includes(a) ? 'px-3 py-1 rounded-full bg-orange-500 text-white text-sm' : 'px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm'}>{a}</button>
                     ))}
                   </div>
                 </div>
@@ -481,9 +493,7 @@ export default function App() {
                 <input type="file" accept="image/*" multiple onChange={handleImageChange} className="w-full border border-gray-300 rounded-lg px-4 py-3" />
                 {previews.length > 0 && (
                   <div className="flex gap-2 mt-3 overflow-x-auto">
-                    {previews.map((p, i) => (
-                      <img key={i} src={p} alt="preview" className="h-24 w-32 object-cover rounded-lg flex-shrink-0" />
-                    ))}
+                    {previews.map((p, i) => <img key={i} src={p} alt="preview" className="h-24 w-32 object-cover rounded-lg flex-shrink-0" />)}
                   </div>
                 )}
               </div>
