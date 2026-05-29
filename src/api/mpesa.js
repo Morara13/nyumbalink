@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://sandbox.intasend.com/api/v1/payment/mpesa-stk-push/', {
+    const response = await fetch('https://payment.intasend.com/api/v1/payment/mpesa-stk-push/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     })
 
     const data = await response.json()
+    console.log('IntaSend response:', data)
 
     if (data.invoice) {
       return res.status(200).json({ success: true, invoice_id: data.invoice.invoice_id })
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: data.detail || 'Payment failed' })
     }
   } catch (e) {
+    console.error('IntaSend error:', e)
     return res.status(500).json({ error: 'Server error' })
   }
 }
