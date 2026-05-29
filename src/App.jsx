@@ -38,11 +38,7 @@ function PaymentModal({ listing, onClose }) {
       const res = await fetch('/api/mpesa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: phone,
-          amount: fee,
-          reference: 'Kodi254 - ' + listing.title
-        })
+        body: JSON.stringify({ phone, amount: fee, reference: 'Kodi254 - ' + listing.title })
       })
       const data = await res.json()
       if (data.success) {
@@ -51,7 +47,7 @@ function PaymentModal({ listing, onClose }) {
         setError(data.error || 'Payment failed. Please try again.')
       }
     } catch (e) {
-      setError('Network error. Please try again.')
+      setError('Network error: ' + e.message)
     }
     setLoading(false)
   }
@@ -60,25 +56,24 @@ function PaymentModal({ listing, onClose }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-800">{isAirbnb ? 'Book Now' : 'Request Viewing'}</h3>
+          <h3 className="text-lg font-bold">{isAirbnb ? 'Book Now' : 'Request Viewing'}</h3>
           <button onClick={onClose} className="text-gray-500 text-xl font-bold">✕</button>
         </div>
         {step === 1 && (
           <div>
             <div className="bg-green-50 rounded-xl p-4 mb-4">
-              <p className="text-green-800 font-semibold text-lg mb-1">{listing.title}</p>
+              <p className="text-green-800 font-semibold">{listing.title}</p>
               <p className="text-gray-600 text-sm">📍 {listing.location}</p>
-              <p className="text-gray-600 text-sm">🛏 {listing.bedrooms} Bedroom(s)</p>
-              {isAirbnb ? <p className="text-orange-600 font-bold mt-2">KES {listing.price.toLocaleString()}/night</p> : <p className="text-green-700 font-bold mt-2">Viewing Fee: KES 250</p>}
+              {isAirbnb ? <p className="text-orange-600 font-bold mt-1">KES {listing.price.toLocaleString()}/night</p> : <p className="text-green-700 font-bold mt-1">Viewing Fee: KES 250</p>}
             </div>
             <div className="bg-blue-50 rounded-xl p-4 mb-4">
-              <p className="text-blue-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
-              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and we will send a payment prompt to your phone!</p>
-              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa number e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
+              <p className="text-blue-800 font-semibold mb-2">📱 Pay via M-Pesa STK Push</p>
+              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and you will receive a payment prompt on your phone!</p>
+              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
             </div>
             {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
             <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
-              {loading ? 'Sending payment prompt...' : 'Pay KES ' + fee + ' via M-Pesa 📱'}
+              {loading ? 'Sending prompt...' : 'Pay KES ' + fee + ' via M-Pesa 📱'}
             </button>
           </div>
         )}
@@ -86,9 +81,9 @@ function PaymentModal({ listing, onClose }) {
           <div className="text-center">
             <div className="text-5xl mb-4">📱</div>
             <h3 className="text-xl font-bold mb-2">Check Your Phone!</h3>
-            <p className="text-gray-500 mb-4">An M-Pesa prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete payment.</p>
+            <p className="text-gray-500 mb-4">M-Pesa prompt sent to <strong>{phone}</strong>. Enter your PIN to complete.</p>
             <div className="bg-yellow-50 rounded-xl p-4 mb-4">
-              <p className="text-yellow-800 text-sm">After completing payment, landlord contact will be sent to your WhatsApp within 30 minutes.</p>
+              <p className="text-yellow-800 text-sm">After payment, landlord contact sent to your WhatsApp within 30 minutes.</p>
             </div>
             <button onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have completed payment ✓</button>
           </div>
@@ -97,7 +92,7 @@ function PaymentModal({ listing, onClose }) {
           <div className="text-center">
             <div className="text-5xl mb-4">⏳</div>
             <h3 className="text-xl font-bold mb-2">Payment Under Review</h3>
-            <p className="text-gray-500 mb-4">We will verify your payment and send landlord contact to your WhatsApp within <strong>30 minutes</strong>.</p>
+            <p className="text-gray-500 mb-4">We will send landlord contact to your WhatsApp within <strong>30 minutes</strong>.</p>
             <button onClick={onClose} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">Done</button>
           </div>
         )}
@@ -124,11 +119,7 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
       const res = await fetch('/api/mpesa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: phone,
-          amount: fee,
-          reference: 'Kodi254 Listing Fee'
-        })
+        body: JSON.stringify({ phone, amount: fee, reference: 'Kodi254 Listing Fee' })
       })
       const data = await res.json()
       if (data.success) {
@@ -137,7 +128,7 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
         setError(data.error || 'Payment failed. Please try again.')
       }
     } catch (e) {
-      setError('Network error. Please try again.')
+      setError('Network error: ' + e.message)
     }
     setLoading(false)
   }
@@ -157,13 +148,13 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
               <p className="text-3xl font-bold text-blue-700">KES {fee}</p>
             </div>
             <div className="bg-green-50 rounded-xl p-4 mb-4">
-              <p className="text-green-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
-              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and we will send a payment prompt to your phone!</p>
-              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa number e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
+              <p className="text-green-800 font-semibold mb-2">📱 Pay via M-Pesa STK Push</p>
+              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and you will receive a payment prompt!</p>
+              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
             </div>
             {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
             <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
-              {loading ? 'Sending payment prompt...' : 'Pay KES ' + fee + ' via M-Pesa 📱'}
+              {loading ? 'Sending prompt...' : 'Pay KES ' + fee + ' via M-Pesa 📱'}
             </button>
           </div>
         )}
@@ -171,7 +162,7 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
           <div className="text-center">
             <div className="text-5xl mb-4">📱</div>
             <h3 className="text-xl font-bold mb-2">Check Your Phone!</h3>
-            <p className="text-gray-500 mb-4">An M-Pesa prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete payment.</p>
+            <p className="text-gray-500 mb-4">M-Pesa prompt sent to <strong>{phone}</strong>. Enter your PIN to complete.</p>
             <button onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have completed payment ✓</button>
           </div>
         )}
@@ -330,7 +321,6 @@ function HomePage({ listings, setPage, setFilter }) {
   ]
   return (
     <div>
-      {/* Anchor Navigation */}
       <div className="bg-white shadow-sm sticky top-16 z-30 overflow-x-auto">
         <div className="flex gap-1 px-4 py-2 max-w-4xl mx-auto">
           <button onClick={() => scrollTo('hero')} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-green-50 hover:text-green-700 whitespace-nowrap">🏠 Home</button>
@@ -341,10 +331,9 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Hero */}
       <div id="hero" className="bg-gradient-to-br from-green-700 to-green-900 text-white py-16 px-4 text-center">
         <h1 className="text-4xl font-bold mb-4">Find Your Perfect Home in Kenya 🇰🇪</h1>
-        <p className="text-green-100 text-lg mb-8 max-w-xl mx-auto">Kodi254 connects tenants directly with landlords — no agents, no hidden fees. Find rentals and short stays across Kenya.</p>
+        <p className="text-green-100 text-lg mb-8 max-w-xl mx-auto">Kodi254 connects tenants directly with landlords — no agents, no hidden fees.</p>
         <div className="flex justify-center gap-4 flex-wrap mb-12">
           <button onClick={() => { setPage('search'); setFilter('rental') }} className="bg-white text-green-700 px-8 py-3 rounded-xl font-bold hover:bg-green-50 shadow-lg">🏠 Find Rental</button>
           <button onClick={() => { setPage('search'); setFilter('airbnb') }} className="bg-orange-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-600 shadow-lg">🏨 Short Stays</button>
@@ -365,7 +354,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* How it Works */}
       <div id="how" className="py-12 px-4 bg-white scroll-mt-32">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">How Kodi254 Works</h2>
         <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
@@ -373,27 +361,26 @@ function HomePage({ listings, setPage, setFilter }) {
             <div className="bg-green-100 text-green-700 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">1</div>
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Search for a Property</h3>
-              <p className="text-gray-500 text-sm">Browse hundreds of verified rental and short stay listings across Kenya.</p>
+              <p className="text-gray-500 text-sm">Browse verified rental and short stay listings across Kenya.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <div className="bg-green-100 text-green-700 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">2</div>
             <div>
-              <h3 className="font-bold text-gray-800 mb-1">Pay Small Verification Fee</h3>
-              <p className="text-gray-500 text-sm">Pay KES 250 via M-Pesa STK push — directly on your phone, no manual transfer needed.</p>
+              <h3 className="font-bold text-gray-800 mb-1">Pay via M-Pesa STK Push</h3>
+              <p className="text-gray-500 text-sm">Pay KES 250 — receive a prompt directly on your phone. No manual transfer!</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <div className="bg-green-100 text-green-700 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">3</div>
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Get Landlord Contact</h3>
-              <p className="text-gray-500 text-sm">After payment, you receive the landlord contact directly on WhatsApp. No middlemen!</p>
+              <p className="text-gray-500 text-sm">After payment, receive landlord contact on WhatsApp. No middlemen!</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Features */}
       <div id="features" className="py-12 px-4 bg-gray-50 scroll-mt-32">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">Why Choose Kodi254?</h2>
         <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
@@ -420,7 +407,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Contact */}
       <div id="contact" className="py-12 px-4 bg-white scroll-mt-32">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">Contact Us</h2>
         <p className="text-gray-500 text-center mb-8">Have a question? We are here to help!</p>
@@ -443,7 +429,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Reviews */}
       <div id="reviews" className="py-12 px-4 bg-gray-50 scroll-mt-32">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">What People Say</h2>
         <p className="text-gray-500 text-center mb-8">Trusted by tenants and landlords across Kenya</p>
@@ -464,7 +449,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="bg-green-800 text-white py-8 px-4 text-center">
         <h3 className="text-xl font-bold mb-2">🏠 Kodi254</h3>
         <p className="text-green-300 text-sm mb-2">Kenya's trusted property platform</p>
@@ -579,7 +563,7 @@ export default function App() {
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
     } catch (e) {
-      alert('Error saving listing.')
+      alert('Error: ' + e.message)
       console.error(e)
     }
     setSubmitting(false)
@@ -597,7 +581,6 @@ export default function App() {
     <div className="min-h-screen bg-gray-100">
       {showLandlordPayment && <LandlordPaymentModal listingType={form.type} onSuccess={submitListing} onClose={() => setShowLandlordPayment(false)} />}
 
-      {/* Navbar */}
       <div className="bg-green-700 text-white p-4 shadow-md sticky top-0 z-40">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button onClick={() => setPage('home')} className="text-xl font-bold">🏠 Kodi254</button>
