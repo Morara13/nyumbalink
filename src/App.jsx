@@ -23,9 +23,39 @@ function PaymentModal({ listing, onClose }) {
   const isAirbnb = listing.type === 'airbnb'
   const fee = isAirbnb ? listing.price : 250
   const [step, setStep] = useState(1)
-  const [code, setCode] = useState('')
-  const [mpesa, setMpesa] = useState('')
-  const waLink = "https://wa.me/254" + MPESA_NUMBER.substring(1) + "?text=Hi Kodi254, I have paid KES " + fee + " for listing: " + listing.title + " in " + listing.location + ". My M-Pesa code is: " + code
+  const [phone, setPhone] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const triggerSTK = async () => {
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid M-Pesa number')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/mpesa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phone,
+          amount: fee,
+          reference: 'Kodi254 - ' + listing.title
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setStep(2)
+      } else {
+        setError(data.error || 'Payment failed. Please try again.')
+      }
+    } catch (e) {
+      setError('Network error. Please try again.')
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
@@ -43,26 +73,31 @@ function PaymentModal({ listing, onClose }) {
             </div>
             <div className="bg-blue-50 rounded-xl p-4 mb-4">
               <p className="text-blue-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
-              <p className="text-gray-700 text-sm mb-1">1. Go to M-Pesa → Send Money</p>
-              <p className="text-gray-700 text-sm mb-1">2. Send <strong>KES {fee}</strong> to:</p>
-              <p className="text-2xl font-bold text-blue-700 text-center my-2">{MPESA_NUMBER}</p>
-              <p className="text-gray-700 text-sm">3. Save your confirmation code</p>
+              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and we will send a payment prompt to your phone!</p>
+              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa number e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
             </div>
-            <button onClick={() => setStep(2)} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
+            {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+            <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
+              {loading ? 'Sending payment prompt...' : 'Pay KES ' + fee + ' via M-Pesa 📱'}
+            </button>
           </div>
         )}
         {step === 2 && (
-          <div>
-            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa code e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
-            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Your M-Pesa number" value={mpesa} onChange={e => setMpesa(e.target.value)} />
-            <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold block text-center">📱 Send Payment Proof on WhatsApp</a>
+          <div className="text-center">
+            <div className="text-5xl mb-4">📱</div>
+            <h3 className="text-xl font-bold mb-2">Check Your Phone!</h3>
+            <p className="text-gray-500 mb-4">An M-Pesa prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete payment.</p>
+            <div className="bg-yellow-50 rounded-xl p-4 mb-4">
+              <p className="text-yellow-800 text-sm">After completing payment, landlord contact will be sent to your WhatsApp within 30 minutes.</p>
+            </div>
+            <button onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have completed payment ✓</button>
           </div>
         )}
         {step === 3 && (
           <div className="text-center">
             <div className="text-5xl mb-4">⏳</div>
             <h3 className="text-xl font-bold mb-2">Payment Under Review</h3>
-            <p className="text-gray-500 mb-4">We will send landlord contact to your WhatsApp within <strong>30 minutes</strong>.</p>
+            <p className="text-gray-500 mb-4">We will verify your payment and send landlord contact to your WhatsApp within <strong>30 minutes</strong>.</p>
             <button onClick={onClose} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">Done</button>
           </div>
         )}
@@ -74,8 +109,39 @@ function PaymentModal({ listing, onClose }) {
 function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
   const fee = listingType === 'airbnb' ? 500 : 300
   const [step, setStep] = useState(1)
-  const [code, setCode] = useState('')
-  const waLink = "https://wa.me/254" + MPESA_NUMBER.substring(1) + "?text=Hi Kodi254, I have paid KES " + fee + " listing fee. My M-Pesa code is: " + code
+  const [phone, setPhone] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const triggerSTK = async () => {
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid M-Pesa number')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/mpesa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phone,
+          amount: fee,
+          reference: 'Kodi254 Listing Fee'
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setStep(2)
+      } else {
+        setError(data.error || 'Payment failed. Please try again.')
+      }
+    } catch (e) {
+      setError('Network error. Please try again.')
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
@@ -92,16 +158,21 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
             </div>
             <div className="bg-green-50 rounded-xl p-4 mb-4">
               <p className="text-green-800 font-semibold mb-2">📱 Pay via M-Pesa</p>
-              <p className="text-gray-700 text-sm mb-1">Send <strong>KES {fee}</strong> to:</p>
-              <p className="text-2xl font-bold text-green-700 text-center my-2">{MPESA_NUMBER}</p>
+              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and we will send a payment prompt to your phone!</p>
+              <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa number e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
             </div>
-            <button onClick={() => setStep(2)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have paid ✓</button>
+            {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+            <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
+              {loading ? 'Sending payment prompt...' : 'Pay KES ' + fee + ' via M-Pesa 📱'}
+            </button>
           </div>
         )}
         {step === 2 && (
-          <div>
-            <input className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="M-Pesa code e.g. QGH7X8Y9Z0" value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
-            <a href={waLink} target="_blank" rel="noreferrer" className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold block text-center" onClick={() => setStep(3)}>📱 Send Payment Proof</a>
+          <div className="text-center">
+            <div className="text-5xl mb-4">📱</div>
+            <h3 className="text-xl font-bold mb-2">Check Your Phone!</h3>
+            <p className="text-gray-500 mb-4">An M-Pesa prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete payment.</p>
+            <button onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold">I have completed payment ✓</button>
           </div>
         )}
         {step === 3 && (
@@ -250,9 +321,7 @@ function AuthPage({ onAuth }) {
 }
 
 function HomePage({ listings, setPage, setFilter }) {
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   const reviews = [
     { name: "Jane Mwangi", location: "Nairobi", text: "Found my apartment in 2 days! The process was so easy and transparent.", rating: 5 },
     { name: "Peter Otieno", location: "Kisumu", text: "Listed my house and got a tenant within a week. Highly recommend!", rating: 5 },
@@ -304,21 +373,21 @@ function HomePage({ listings, setPage, setFilter }) {
             <div className="bg-green-100 text-green-700 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">1</div>
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Search for a Property</h3>
-              <p className="text-gray-500 text-sm">Browse hundreds of verified rental and short stay listings across Kenya. Filter by location, price and type.</p>
+              <p className="text-gray-500 text-sm">Browse hundreds of verified rental and short stay listings across Kenya.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <div className="bg-green-100 text-green-700 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">2</div>
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Pay Small Verification Fee</h3>
-              <p className="text-gray-500 text-sm">Pay KES 250 via M-Pesa to verify your interest. This ensures only serious tenants contact landlords.</p>
+              <p className="text-gray-500 text-sm">Pay KES 250 via M-Pesa STK push — directly on your phone, no manual transfer needed.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <div className="bg-green-100 text-green-700 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">3</div>
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Get Landlord Contact</h3>
-              <p className="text-gray-500 text-sm">After payment verification, you receive the landlord contact directly on WhatsApp. No middlemen!</p>
+              <p className="text-gray-500 text-sm">After payment, you receive the landlord contact directly on WhatsApp. No middlemen!</p>
             </div>
           </div>
         </div>
@@ -331,17 +400,17 @@ function HomePage({ listings, setPage, setFilter }) {
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="text-3xl mb-2">🔒</div>
             <h3 className="font-bold text-gray-800 mb-1">Verified Listings</h3>
-            <p className="text-gray-500 text-sm">All listings are from verified landlords who have paid to list.</p>
+            <p className="text-gray-500 text-sm">All listings from verified landlords who have paid to list.</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="text-3xl mb-2">💰</div>
             <h3 className="font-bold text-gray-800 mb-1">No Agent Fees</h3>
-            <p className="text-gray-500 text-sm">Connect directly with landlords. Save thousands in agent commissions.</p>
+            <p className="text-gray-500 text-sm">Connect directly with landlords. Save thousands in commissions.</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="text-3xl mb-2">📱</div>
-            <h3 className="font-bold text-gray-800 mb-1">WhatsApp Direct</h3>
-            <p className="text-gray-500 text-sm">Contact landlords directly on WhatsApp after verification.</p>
+            <h3 className="font-bold text-gray-800 mb-1">M-Pesa STK Push</h3>
+            <p className="text-gray-500 text-sm">Automated M-Pesa payments — no manual transfers needed.</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="text-3xl mb-2">🏨</div>
@@ -622,7 +691,6 @@ export default function App() {
           </div>
         </div>
       )}
-
     </div>
   )
 }
