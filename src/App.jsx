@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css'
 const auth = getAuth()
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg4dwedsi"
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_preset"
-const MPESA_NUMBER = import.meta.env.VITE_MPESA_NUMBER || "0712345678"
+const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
   const formData = new FormData()
@@ -149,7 +149,7 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
             </div>
             <div className="bg-green-50 rounded-xl p-4 mb-4">
               <p className="text-green-800 font-semibold mb-2">📱 Pay via M-Pesa STK Push</p>
-              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and you will receive a payment prompt!</p>
+              <p className="text-gray-700 text-sm mb-3">Enter your M-Pesa number and receive a payment prompt on your phone!</p>
               <input className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="e.g. 0712345678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
             </div>
             {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
@@ -314,10 +314,30 @@ function AuthPage({ onAuth }) {
 function HomePage({ listings, setPage, setFilter }) {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   const reviews = [
-    { name: "Jane Mwangi", location: "Nairobi", text: "Found my apartment in 2 days! The process was so easy and transparent.", rating: 5 },
-    { name: "Peter Otieno", location: "Kisumu", text: "Listed my house and got a tenant within a week. Highly recommend!", rating: 5 },
-    { name: "Mary Wanjiku", location: "Nakuru", text: "Best platform for finding short stays in Kenya. Very affordable!", rating: 5 },
-    { name: "David Kimani", location: "Kisii", text: "No agent fees saved me a lot of money. Direct contact with landlord!", rating: 4 },
+    {
+      name: "Mike",
+      location: "Chuka",
+      text: "Niliamua kutumia Kodi254 baada ya kushindwa kupata nyumba kwa wiki mbili. Siku moja tu, nilikuwa na mawasiliano ya mwenye nyumba mzuri Chuka town. Ilikuwa rahisi sana na bei ya kuona nyumba ilikuwa ya chini sana.",
+      rating: 5
+    },
+    {
+      name: "Masese",
+      location: "Nairobi",
+      text: "Nilikuwa nikiangalia nyumba Nairobi kwa muda mrefu. Agents walikuwa wananiomba pesa nyingi bila kitu. Kodi254 ilinisaidia kupata nyumba bila agent fees. Highly recommended!",
+      rating: 5
+    },
+    {
+      name: "Brandon",
+      location: "Kisii",
+      text: "I listed my house on Kodi254 and within 3 days I already had a serious tenant. The platform is straightforward and the M-Pesa payment system makes everything smooth. Worth every shilling.",
+      rating: 5
+    },
+    {
+      name: "Mong'ina",
+      location: "Kisii",
+      text: "Nilikuwa na nyumba yangu ikiwa wazi kwa miezi miwili. Baada ya kuweka kwenye Kodi254, nilipata mpangaji ndani ya wiki moja. Bei ya kuweka listing ni ya chini sana ukilinganisha na faida unayopata.",
+      rating: 5
+    },
   ]
   return (
     <div>
@@ -419,7 +439,7 @@ function HomePage({ listings, setPage, setFilter }) {
             </div>
           </div>
           <div className="space-y-3">
-            <a href={"https://wa.me/254" + MPESA_NUMBER.substring(1)} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-green-500 text-white px-4 py-3 rounded-lg font-medium">
+            <a href="https://wa.me/254724380481" target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-green-500 text-white px-4 py-3 rounded-lg font-medium">
               <span>📱</span> Chat on WhatsApp
             </a>
             <a href="mailto:kodikenya254@gmail.com" className="flex items-center gap-3 bg-blue-500 text-white px-4 py-3 rounded-lg font-medium">
