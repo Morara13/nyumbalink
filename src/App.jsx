@@ -11,12 +11,27 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_
 const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("upload_preset", UPLOAD_PRESET)
-  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
-  const data = await res.json()
-  return data.secure_url
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "kodi254_preset");
+  
+  try {
+    const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error?.message || 'Cloudinary upload failed');
+    }
+    
+    const data = await res.json();
+    return data.secure_url || '';
+  } catch (error) {
+    console.error("Image upload error:", error);
+    throw error;
+  }
 }
 
 function PaymentModal({ listing, onClose }) {
