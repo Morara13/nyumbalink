@@ -186,90 +186,97 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
 }
 
 function ListingCard({ listing }) {
-  const [showPayment, setShowPayment] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+  const [showPayment, setShowPayment] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
-  const isAirbnb = listing.type === 'airbnb'
-  const position = [-0.6831, 37.0]
+  const isAirbnb = listing.type === 'airbnb';
+  const position = [-0.6831, 37.0];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
-<div className="relative w-full h-52 overflow-hidden group select-none">
-  {/* The Active Image */}
-  <img 
-    src={listing.images[currentImgIndex]} 
-    alt="house" 
-    className="w-full h-full object-cover" 
-  />
-  
-  {/* Left Navigation Arrow */}
-  {listing.images.length > 1 && (
-    <button 
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation(); 
-        setCurrentImgIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
-      }} 
-      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-    >
-      &#10094;
-    </button>
-  )}
-
- {/* Left Navigation Arrow */}
-      {listing.images && listing.images.length > 1 && (
-        <button 
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation(); 
-            setCurrentImgIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
-          }} 
-          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-        >
-          &#10094;
-        </button>
-      )}
-
-      {/* Right Navigation Arrow */}
-      {listing.images && listing.images.length > 1 && (
-        <button 
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCurrentImgIndex((prev) => (prev === listing.images.length - 1 ? 0 : prev + 1));
-          }} 
-          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-        >
-          &#10095;
-        </button>
-      )}
       
-      {/* Dynamic Index Counter */}
-      {listing.images && listing.images.length > 1 && (
-        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded font-semibold tracking-wider z-10">
-          {currentImgIndex + 1} / {listing.images.length}
-        </div>
-      )}
+      {/* Image Section / Slider */}
+      {listing.images && listing.images.length > 0 ? (
+        <div className="relative w-full h-52 overflow-hidden group select-none">
+          <img 
+            src={listing.images[currentImgIndex]} 
+            alt="house" 
+            className="w-full h-full object-cover" 
+          />
+          
+          {/* Left Arrow */}
+          {listing.images.length > 1 && (
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation(); 
+                setCurrentImgIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
+              }} 
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+            >
+              &#10094;
+            </button>
+          )}
 
-      {/* Top-Left Orange Airbnb Badge */}
-      {isAirbnb && (
-        <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded shadow z-10">
-          Airbnb
-        </div>
-      )}
+          {/* Right Arrow */}
+          {listing.images.length > 1 && (
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentImgIndex((prev) => (prev === listing.images.length - 1 ? 0 : prev + 1));
+              }} 
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+            >
+              &#10095;
+            </button>
+          )}
+          
+          {/* Image Counter Badge */}
+          {listing.images.length > 1 && (
+            <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded font-semibold tracking-wider z-10">
+              {currentImgIndex + 1} / {listing.images.length}
+            </div>
+          )}
 
-      {/* TAKEN Full-Screen Overlay */}
-      {listing.status === 'taken' && (
-        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center text-white font-bold tracking-wider text-sm z-20">
-          TAKEN
+          {/* Airbnb Badge */}
+          {isAirbnb && (
+            <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded shadow z-10">
+              Airbnb
+            </div>
+          )}
+
+          {/* Taken Status Overlay */}
+          {listing.status === 'taken' && (
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center text-white font-bold tracking-wider text-sm z-20">
+              TAKEN
+            </div>
+          )}
         </div>
-      )}
       ) : (
         <div className="w-full h-32 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
           <span className="text-5xl">{isAirbnb ? '🏨' : '🏠'}</span>
         </div>
       )}
+
+      {/* Listing Details Content */}
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-bold text-gray-900 flex-1 pr-3">{listing.title}</h3>
+          <div className="text-right flex-shrink-0">
+            <p className={isAirbnb ? "text-orange-600 font-black" : "text-green-700 font-black"}>
+              KES {parseInt(listing.price).toLocaleString()}
+            </p>
+            <p className="text-gray-400 text-xs">{isAirbnb ? 'per night' : 'per month'}</p>
+          </div>
+        </div>
+        
+        {/* Rest of your info grid / text descriptions go here */}
+      </div>
+    </div>
+  );
+}
 
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
