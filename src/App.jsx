@@ -567,20 +567,18 @@ export default function App() {
       }
       setUploadProgress('Saving...');
 
-      const newListing = {
+ const newListing = {
   title: form?.title || '',
   location: form?.location || '',
   price: parseInt(form?.price) || 0,
-  bedrooms: parseInt(form?.bedrooms) || 0,
+  bedrooms: parseInt(form?.bedrooms) || form?.bedrooms || 0,
   phone: form?.phone || '',
   description: form?.description || '',
   type: form?.type || '',
-  // Safely fallback if amenities state is undefined
   amenities: form?.type === 'airbnb' ? (amenities ?? []) : [], 
   images: imageUrls || [],
   createdAt: new Date(),
-  // Ensure user exists and has an email, otherwise fallback to 'anonymous'
-  landlordEmail: (user && user.email) ? user.email : 'anonymous',
+  landlordEmail: user?.email || 'anonymous',
   status: 'available'
 };
 
