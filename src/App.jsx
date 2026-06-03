@@ -557,53 +557,47 @@ export default function App() {
   }
 
  const submitListing = async () => {
-  setShowLandlordPayment(false); setSubmitting(true)
-  try {
-    let imageUrls = []
-    for (let i = 0; i < images.length; i++) {
-      setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...')
-      const url = await uploadImage(images[i])
-      // ONLY push if the URL actually exists and is not undefined/null
-      if (url) {
-        imageUrls.push(url)
+    setShowLandlordPayment(false); 
+    setSubmitting(true);
+    try {
+      let imageUrls = [];
+      for (let i = 0; i < images.length; i++) {
+        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...');
+        imageUrls.push(await uploadImage(images[i]));
       }
+      setUploadProgress('Saving...');
+
+      const newListing = {
+  title: form?.title || '',
+  location: form?.location || '',
+  price: parseInt(form?.price) || 0,
+  bedrooms: parseInt(form?.bedrooms) || 0,
+  phone: form?.phone || '',
+  description: form?.description || '',
+  type: form?.type || '',
+  // Safely fallback if amenities state is undefined
+  amenities: form?.type === 'airbnb' ? (amenities ?? []) : [], 
+  images: imageUrls || [],
+  createdAt: new Date(),
+  // Ensure user exists and has an email, otherwise fallback to 'anonymous'
+  landlordEmail: (user && user.email) ? user.email : 'anonymous',
+  status: 'available'
+};
+
+      const docRef = await addDoc(collection(db, 'listings'), newListing);
+      setListings([{ id: docRef.id, ...newListing }, ...listings]);
+      setForm({ title: '', location: '', price: '', bedrooms: '', phone: '', description: '', type: '' });
+      setAmenities([]); 
+      setImages([]); 
+      setPreviews([]); 
+      setUploadProgress('');
+      setSubmitted(true);
+      setTimeout(() => { setSubmitted(false); setPage('dashboard'); }, 2000);
+    } catch (e) { 
+      alert('Error: ' + e.message); 
     }
-    setUploadProgress('Saving...')
-
-    // Safe check for amenities to remove any accidental undefined items
-    const safeAmenities = Array.isArray(amenities) 
-      ? amenities.filter(item => item !== undefined && item !== null)
-      : [];
-
-    const newListing = {
-      title: String(form.title || ''),
-      location: String(form.location || ''),
-      price: parseInt(form.price) || 0,
-      bedrooms: parseInt(form.bedrooms) || 1,
-      phone: String(form.phone || ''),
-      description: String(form.description || ''),
-      type: String(form.type || 'rental'),
-      amenities: form.type === 'airbnb' ? safeAmenities : [],
-      images: imageUrls,
-      createdAt: new Date(),
-      // Added optional chaining ?. just in case user object itself is null/logged out
-      landlordEmail: String(user?.email || 'anonymous'), 
-      status: 'available'
-    }
-
-    const docRef = await addDoc(collection(db, 'listings'), newListing)
-    setListings([{ id: docRef.id, ...newListing }, ...listings])
-    setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
-    setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
-    setSubmitted(true)
-    setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
-  } catch (e) {
-    alert('Error: ' + e.message)
-    console.error('Firestore error:', e)
-  }
-  setSubmitting(false)
-}
-
+    setSubmitting(false);
+  };
 
   const navBtn = (target, label) => (
     <button onClick={() => setPage(target)} className={page === target ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600 transition-colors'}>
