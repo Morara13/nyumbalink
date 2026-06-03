@@ -11,27 +11,12 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_
 const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "kodi254_preset");
-  
-  try {
-    const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error?.message || 'Cloudinary upload failed');
-    }
-    
-    const data = await res.json();
-    return data.secure_url || '';
-  } catch (error) {
-    console.error("Image upload error:", error);
-    throw error;
-  }
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("upload_preset", UPLOAD_PRESET)
+  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
+  const data = await res.json()
+  return data.secure_url
 }
 
 function PaymentModal({ listing, onClose }) {
@@ -188,7 +173,7 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
 function ListingCard({ listing }) {
   const [showPayment, setShowPayment] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [imgIndex, setImgIndex] = useState(0); // Add this for the slider
   const isAirbnb = listing.type === 'airbnb';
   const position = [-0.6831, 37.0];
 
@@ -196,63 +181,33 @@ function ListingCard({ listing }) {
     <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
       
-      {/* Image Section / Slider */}
+      {/* Image Slider Section */}
       {listing.images && listing.images.length > 0 ? (
-        <div className="relative w-full h-52 overflow-hidden group select-none">
-          <img 
-            src={listing.images[currentImgIndex]} 
-            alt="house" 
-            className="w-full h-full object-cover" 
-          />
+        <div className="relative w-full h-52 overflow-hidden select-none">
+          <img src={listing.images[imgIndex]} alt="house" className="w-full h-full object-cover transition-opacity duration-300" />
           
-          {/* Left Arrow */}
+          {/* Arrows */}
           {listing.images.length > 1 && (
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation(); 
-                setCurrentImgIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
-              }} 
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-            >
-              &#10094;
-            </button>
+            <>
+              <button 
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => (prev === 0 ? listing.images.length - 1 : prev - 1)); }} 
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10"
+              >❮</button>
+              <button 
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => (prev === listing.images.length - 1 ? 0 : prev + 1)); }} 
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10"
+              >❯</button>
+              {/* Counter */}
+              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full font-bold">
+                {imgIndex + 1} / {listing.images.length}
+              </div>
+            </>
           )}
 
-          {/* Right Arrow */}
-          {listing.images.length > 1 && (
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentImgIndex((prev) => (prev === listing.images.length - 1 ? 0 : prev + 1));
-              }} 
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-            >
-              &#10095;
-            </button>
-          )}
-          
-          {/* Image Counter Badge */}
-          {listing.images.length > 1 && (
-            <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded font-semibold tracking-wider z-10">
-              {currentImgIndex + 1} / {listing.images.length}
-            </div>
-          )}
-
-          {/* Airbnb Badge */}
-          {isAirbnb && (
-            <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded shadow z-10">
-              Airbnb
-            </div>
-          )}
-
-          {/* Taken Status Overlay */}
-          {listing.status === 'taken' && (
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center text-white font-bold tracking-wider text-sm z-20">
-              TAKEN
-            </div>
-          )}
+          {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">🏨 Short Stay</div>}
+          {listing.status === 'taken' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span></div>}
         </div>
       ) : (
         <div className="w-full h-32 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
@@ -260,24 +215,7 @@ function ListingCard({ listing }) {
         </div>
       )}
 
-      {/* Listing Details Content */}
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-bold text-gray-900 flex-1 pr-3">{listing.title}</h3>
-          <div className="text-right flex-shrink-0">
-            <p className={isAirbnb ? "text-orange-600 font-black" : "text-green-700 font-black"}>
-              KES {parseInt(listing.price).toLocaleString()}
-            </p>
-            <p className="text-gray-400 text-xs">{isAirbnb ? 'per night' : 'per month'}</p>
-          </div>
-        </div>
-        
-        {/* Rest of your info grid / text descriptions go here */}
-      </div>
-    </div>
-  );
-}
-
+      {/* Details Section */}
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-gray-900 flex-1 pr-3">{listing.title}</h3>
@@ -286,27 +224,23 @@ function ListingCard({ listing }) {
             <p className="text-gray-400 text-xs">{isAirbnb ? 'per night' : 'per month'}</p>
           </div>
         </div>
-
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
           <span>📍 {listing.location}</span>
           <span className="text-gray-300">·</span>
           <span>🛏 {listing.bedrooms} bed{listing.bedrooms > 1 ? 's' : ''}</span>
         </div>
-
+        {/* ... keep the rest of your existing description/amenities/map code here ... */}
         {listing.amenities && listing.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {listing.amenities.slice(0, 4).map((a, i) => <span key={i} className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-lg">{a}</span>)}
-            {listing.amenities.length > 4 && <span className="bg-gray-100 text-gray-400 text-xs px-2 py-1 rounded-lg">+{listing.amenities.length - 4} more</span>}
           </div>
         )}
-
         {listing.description && (
           <p className="text-gray-500 text-sm mb-3 leading-relaxed">
             {expanded ? listing.description : listing.description.substring(0, 90) + (listing.description.length > 90 ? '...' : '')}
             {listing.description.length > 90 && <button onClick={() => setExpanded(!expanded)} className="text-green-600 font-medium ml-1">{expanded ? 'less' : 'more'}</button>}
           </p>
         )}
-
         {listing.status !== 'taken' ? (
           <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all" : "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-all"}>
             {isAirbnb ? '🏨 Book Now' : '🔍 Request Viewing · KES 250'}
@@ -314,11 +248,7 @@ function ListingCard({ listing }) {
         ) : (
           <div className="w-full bg-gray-100 text-gray-400 py-3 rounded-xl text-center text-sm font-medium">Not Available</div>
         )}
-
-        <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">
-          {expanded ? '▲ collapse' : '▼ show map'}
-        </button>
-
+        <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">{expanded ? '▲ collapse' : '▼ show map'}</button>
         {expanded && (
           <div style={{ height: '150px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
             <MapContainer center={position} zoom={6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
@@ -329,7 +259,7 @@ function ListingCard({ listing }) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function LandlordDashboard({ user, allListings, onUpdate }) {
@@ -657,16 +587,14 @@ export default function App() {
   title: form?.title || '',
   location: form?.location || '',
   price: parseInt(form?.price) || 0,
-  bedrooms: parseInt(form?.bedrooms) || 0,
+  bedrooms: parseInt(form?.bedrooms) || form?.bedrooms || 0,
   phone: form?.phone || '',
   description: form?.description || '',
   type: form?.type || '',
-  // Safely fallback if amenities state is undefined
   amenities: form?.type === 'airbnb' ? (amenities ?? []) : [], 
   images: imageUrls || [],
   createdAt: new Date(),
-  // Ensure user exists and has an email, otherwise fallback to 'anonymous'
-  landlordEmail: (user && user.email) ? user.email : 'anonymous',
+  landlordEmail: user?.email || 'anonymous',
   status: 'available'
 };
 
