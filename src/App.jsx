@@ -188,19 +188,83 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
 function ListingCard({ listing }) {
   const [showPayment, setShowPayment] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const isAirbnb = listing.type === 'airbnb'
   const position = [-0.6831, 37.0]
 
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
-      {listing.images && listing.images.length > 0 ? (
-        <div className="relative">
-          <img src={listing.images[0]} alt="house" className="w-full h-52 object-cover" />
-          {listing.images.length > 1 && <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">+{listing.images.length - 1} photos</div>}
-          {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>}
-          {listing.status === 'taken' && <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center"><span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span></div>}
+<div className="relative w-full h-52 overflow-hidden group select-none">
+  {/* The Active Image */}
+  <img 
+    src={listing.images[currentImgIndex]} 
+    alt="house" 
+    className="w-full h-full object-cover" 
+  />
+  
+  {/* Left Navigation Arrow */}
+  {listing.images.length > 1 && (
+    <button 
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation(); 
+        setCurrentImgIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
+      }} 
+      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+    >
+      &#10094;
+    </button>
+  )}
+
+ {/* Left Navigation Arrow */}
+      {listing.images && listing.images.length > 1 && (
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation(); 
+            setCurrentImgIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
+          }} 
+          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+        >
+          &#10094;
+        </button>
+      )}
+
+      {/* Right Navigation Arrow */}
+      {listing.images && listing.images.length > 1 && (
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCurrentImgIndex((prev) => (prev === listing.images.length - 1 ? 0 : prev + 1));
+          }} 
+          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+        >
+          &#10095;
+        </button>
+      )}
+      
+      {/* Dynamic Index Counter */}
+      {listing.images && listing.images.length > 1 && (
+        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded font-semibold tracking-wider z-10">
+          {currentImgIndex + 1} / {listing.images.length}
         </div>
+      )}
+
+      {/* Top-Left Orange Airbnb Badge */}
+      {isAirbnb && (
+        <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded shadow z-10">
+          Airbnb
+        </div>
+      )}
+
+      {/* TAKEN Full-Screen Overlay */}
+      {listing.status === 'taken' && (
+        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center text-white font-bold tracking-wider text-sm z-20">
+          TAKEN
+        </div>
+      )}
       ) : (
         <div className="w-full h-32 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
           <span className="text-5xl">{isAirbnb ? '🏨' : '🏠'}</span>
