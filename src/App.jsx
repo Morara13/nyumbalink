@@ -567,20 +567,26 @@ export default function App() {
       }
       setUploadProgress('Saving...');
 
+      // Safe parsing for bedrooms if it contains text like "Bedsitter / 1 Bedroom"
+      const parsedBedrooms = parseInt(form.bedrooms);
+
       const newListing = {
         title: form.title || '',
         location: form.location || '',
         price: parseInt(form.price) || 0,
-        bedrooms: parseInt(form.bedrooms) || 0,
+        bedrooms: isNaN(parsedBedrooms) ? (form.bedrooms || '') : parsedBedrooms,
         phone: form.phone || '',
         description: form.description || '',
         type: form.type || '',
         amenities: form.type === 'airbnb' ? (amenities || []) : [],
-        images: imageUrls,
+        images: imageUrls || [],
         createdAt: new Date(),
         landlordEmail: user?.email || 'anonymous',
         status: 'available'
       };
+
+      // CRITICAL DEBUGGING LINE:
+      console.log("THIS IS WHAT IS BEING SENT TO FIRESTORE:", newListing);
 
       const docRef = await addDoc(collection(db, 'listings'), newListing);
       setListings([{ id: docRef.id, ...newListing }, ...listings]);
