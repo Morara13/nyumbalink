@@ -19,6 +19,19 @@ async function uploadImage(file) {
   return data.secure_url
 }
 
+async function getCoordinates(location) {
+  try {
+    const res = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(location + ', Kenya') + '&format=json&limit=1', {
+      headers: { 'Accept-Language': 'en' }
+    })
+    const data = await res.json()
+    if (data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    }
+  } catch (e) { console.error('Geocoding error:', e) }
+  return { lat: -0.6831, lng: 37.0 }
+}
+
 function PaymentModal({ listing, onClose }) {
   const isAirbnb = listing.type === 'airbnb'
   const fee = isAirbnb ? listing.price : 250
@@ -53,7 +66,6 @@ function PaymentModal({ listing, onClose }) {
             </div>
             <button onClick={onClose} className="bg-gray-100 rounded-full w-9 h-9 flex items-center justify-center text-gray-500 text-lg">✕</button>
           </div>
-
           {step === 1 && (
             <div>
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
@@ -171,42 +183,27 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
 }
 
 function ListingCard({ listing }) {
-  const [showPayment, setShowPayment] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const [imgIndex, setImgIndex] = useState(0); // Add this for the slider
-  const isAirbnb = listing.type === 'airbnb';
-  const position = [-0.6831, 37.0];
+  const [showPayment, setShowPayment] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [imgIndex, setImgIndex] = useState(0)
+  const isAirbnb = listing.type === 'airbnb'
+  const position = listing.lat && listing.lng ? [listing.lat, listing.lng] : [-0.6831, 37.0]
 
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
-      
-      {/* Image Slider Section */}
+
       {listing.images && listing.images.length > 0 ? (
-        <div className="relative w-full h-52 overflow-hidden select-none">
+        <div className="relative w-full h-52 overflow-hidden">
           <img src={listing.images[imgIndex]} alt="house" className="w-full h-full object-cover transition-opacity duration-300" />
-          
-          {/* Arrows */}
           {listing.images.length > 1 && (
             <>
-              <button 
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => (prev === 0 ? listing.images.length - 1 : prev - 1)); }} 
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10"
-              >❮</button>
-              <button 
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => (prev === listing.images.length - 1 ? 0 : prev + 1)); }} 
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10"
-              >❯</button>
-              {/* Counter */}
-              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full font-bold">
-                {imgIndex + 1} / {listing.images.length}
-              </div>
+              <button onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1) }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10">❮</button>
+              <button onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === listing.images.length - 1 ? 0 : prev + 1) }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10">❯</button>
+              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">{imgIndex + 1} / {listing.images.length}</div>
             </>
           )}
-
-          {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">🏨 Short Stay</div>}
+          {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>}
           {listing.status === 'taken' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span></div>}
         </div>
       ) : (
@@ -215,7 +212,6 @@ function ListingCard({ listing }) {
         </div>
       )}
 
-      {/* Details Section */}
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-gray-900 flex-1 pr-3">{listing.title}</h3>
@@ -224,23 +220,27 @@ function ListingCard({ listing }) {
             <p className="text-gray-400 text-xs">{isAirbnb ? 'per night' : 'per month'}</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
           <span>📍 {listing.location}</span>
           <span className="text-gray-300">·</span>
           <span>🛏 {listing.bedrooms} bed{listing.bedrooms > 1 ? 's' : ''}</span>
         </div>
-        {/* ... keep the rest of your existing description/amenities/map code here ... */}
+
         {listing.amenities && listing.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {listing.amenities.slice(0, 4).map((a, i) => <span key={i} className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-lg">{a}</span>)}
+            {listing.amenities.length > 4 && <span className="bg-gray-100 text-gray-400 text-xs px-2 py-1 rounded-lg">+{listing.amenities.length - 4} more</span>}
           </div>
         )}
+
         {listing.description && (
           <p className="text-gray-500 text-sm mb-3 leading-relaxed">
             {expanded ? listing.description : listing.description.substring(0, 90) + (listing.description.length > 90 ? '...' : '')}
             {listing.description.length > 90 && <button onClick={() => setExpanded(!expanded)} className="text-green-600 font-medium ml-1">{expanded ? 'less' : 'more'}</button>}
           </p>
         )}
+
         {listing.status !== 'taken' ? (
           <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all" : "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-all"}>
             {isAirbnb ? '🏨 Book Now' : '🔍 Request Viewing · KES 250'}
@@ -248,18 +248,27 @@ function ListingCard({ listing }) {
         ) : (
           <div className="w-full bg-gray-100 text-gray-400 py-3 rounded-xl text-center text-sm font-medium">Not Available</div>
         )}
-        <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">{expanded ? '▲ collapse' : '▼ show map'}</button>
+
+        <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">
+          {expanded ? '▲ collapse' : '▼ show map'}
+        </button>
+
         {expanded && (
-          <div style={{ height: '150px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
-            <MapContainer center={position} zoom={6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+          <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
+            <MapContainer center={position} zoom={listing.lat ? 14 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={position}><Popup>{listing.title}</Popup></Marker>
+              <Marker position={position}>
+                <Popup>
+                  <strong>{listing.title}</strong><br />
+                  📍 {listing.location}
+                </Popup>
+              </Marker>
             </MapContainer>
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 function LandlordDashboard({ user, allListings, onUpdate }) {
@@ -358,7 +367,6 @@ function HomePage({ listings, setPage, setFilter }) {
 
   return (
     <div className="bg-gray-50">
-      {/* Anchor Nav */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-30 overflow-x-auto">
         <div className="flex px-4 py-2 max-w-4xl mx-auto">
           {[['hero','Home'],['how','How it Works'],['features','Features'],['contact','Contact'],['reviews','Reviews']].map(([id, label]) => (
@@ -367,7 +375,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Hero */}
       <div id="hero" className="bg-green-700 text-white py-16 px-4 text-center">
         <p className="text-green-300 text-sm font-medium mb-3">🇰🇪 Kenya's Property Platform</p>
         <h1 className="text-4xl font-black mb-4 leading-tight">Find Your Perfect<br/>Home in Kenya</h1>
@@ -376,7 +383,6 @@ function HomePage({ listings, setPage, setFilter }) {
           <button onClick={() => { setPage('search'); setFilter('rental') }} className="bg-white text-green-700 px-7 py-3 rounded-2xl font-bold shadow-lg hover:bg-green-50 transition-all">🏠 Find Rental</button>
           <button onClick={() => { setPage('search'); setFilter('airbnb') }} className="bg-orange-500 text-white px-7 py-3 rounded-2xl font-bold shadow-lg hover:bg-orange-600 transition-all">🏨 Short Stays</button>
         </div>
-        {/* Stats — white cards, fully visible */}
         <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
           <div className="bg-white rounded-2xl p-4 shadow-md">
             <p className="text-2xl font-black text-green-700">{listings.length}+</p>
@@ -393,7 +399,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* How it Works */}
       <div id="how" className="py-14 px-4 bg-white scroll-mt-32">
         <div className="max-w-2xl mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Simple & Fast</p>
@@ -419,7 +424,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Features */}
       <div id="features" className="py-14 px-4 bg-gray-50 scroll-mt-32">
         <div className="max-w-2xl mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Why Us</p>
@@ -430,7 +434,7 @@ function HomePage({ listings, setPage, setFilter }) {
               ['💸', 'Zero Agent Fees', 'Talk directly to the owner. Save months of rent.'],
               ['📲', 'M-Pesa STK Push', 'No manual transfers. Prompt comes to your phone.'],
               ['🏨', 'Short Stays Too', 'Weekend getaway? Find Airbnb-style stays.'],
-              ['🗺️', 'Map View', 'See exactly where the property is before you call.'],
+              ['🗺️', 'Accurate Map', 'See the exact property location on the map.'],
               ['⚡', 'Fast & Simple', 'Find a house in under 5 minutes.'],
             ].map(([icon, title, desc]) => (
               <div key={title} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
@@ -443,7 +447,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Contact */}
       <div id="contact" className="py-14 px-4 bg-white scroll-mt-32">
         <div className="max-w-md mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Get in Touch</p>
@@ -481,7 +484,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Reviews */}
       <div id="reviews" className="py-14 px-4 bg-gray-50 scroll-mt-32">
         <div className="max-w-2xl mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Real Stories</p>
@@ -507,7 +509,6 @@ function HomePage({ listings, setPage, setFilter }) {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="bg-gray-900 text-white py-10 px-4 text-center">
         <p className="text-2xl font-black mb-1">Kodi254</p>
         <p className="text-gray-400 text-sm mb-1">Kenya's trusted property platform</p>
@@ -572,46 +573,42 @@ export default function App() {
     setShowLandlordPayment(true)
   }
 
- const submitListing = async () => {
-    setShowLandlordPayment(false); 
-    setSubmitting(true);
+  const submitListing = async () => {
+    setShowLandlordPayment(false); setSubmitting(true)
     try {
-      let imageUrls = [];
+      let imageUrls = []
       for (let i = 0; i < images.length; i++) {
-        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...');
-        imageUrls.push(await uploadImage(images[i]));
+        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...')
+        imageUrls.push(await uploadImage(images[i]))
       }
-      setUploadProgress('Saving...');
-
- const newListing = {
-  title: form?.title || '',
-  location: form?.location || '',
-  price: parseInt(form?.price) || 0,
-  bedrooms: parseInt(form?.bedrooms) || form?.bedrooms || 0,
-  phone: form?.phone || '',
-  description: form?.description || '',
-  type: form?.type || '',
-  amenities: form?.type === 'airbnb' ? (amenities ?? []) : [], 
-  images: imageUrls || [],
-  createdAt: new Date(),
-  landlordEmail: user?.email || 'anonymous',
-  status: 'available'
-};
-
-      const docRef = await addDoc(collection(db, 'listings'), newListing);
-      setListings([{ id: docRef.id, ...newListing }, ...listings]);
-      setForm({ title: '', location: '', price: '', bedrooms: '', phone: '', description: '', type: '' });
-      setAmenities([]); 
-      setImages([]); 
-      setPreviews([]); 
-      setUploadProgress('');
-      setSubmitted(true);
-      setTimeout(() => { setSubmitted(false); setPage('dashboard'); }, 2000);
-    } catch (e) { 
-      alert('Error: ' + e.message); 
-    }
-    setSubmitting(false);
-  };
+      setUploadProgress('Getting location...')
+      const coords = await getCoordinates(form.location)
+      setUploadProgress('Saving listing...')
+      const newListing = {
+        title: String(form.title || ''),
+        location: String(form.location || ''),
+        price: parseInt(form.price) || 0,
+        bedrooms: parseInt(form.bedrooms) || 1,
+        phone: String(form.phone || ''),
+        description: String(form.description || ''),
+        type: String(form.type || 'rental'),
+        amenities: form.type === 'airbnb' ? amenities : [],
+        images: imageUrls,
+        lat: coords.lat,
+        lng: coords.lng,
+        createdAt: new Date(),
+        landlordEmail: String(user.email || ''),
+        status: 'available'
+      }
+      const docRef = await addDoc(collection(db, 'listings'), newListing)
+      setListings([{ id: docRef.id, ...newListing }, ...listings])
+      setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
+      setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
+      setSubmitted(true)
+      setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
+    } catch (e) { alert('Error: ' + e.message); console.error(e) }
+    setSubmitting(false)
+  }
 
   const navBtn = (target, label) => (
     <button onClick={() => setPage(target)} className={page === target ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600 transition-colors'}>
@@ -621,10 +618,7 @@ export default function App() {
 
   if (!authChecked) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="text-5xl mb-3">🏠</div>
-        <p className="text-gray-400 text-sm">Loading Kodi254...</p>
-      </div>
+      <div className="text-center"><div className="text-5xl mb-3">🏠</div><p className="text-gray-400 text-sm">Loading Kodi254...</p></div>
     </div>
   )
 
@@ -632,7 +626,6 @@ export default function App() {
     <div className="min-h-screen bg-gray-50">
       {showLandlordPayment && <LandlordPaymentModal listingType={form.type} onSuccess={submitListing} onClose={() => setShowLandlordPayment(false)} />}
 
-      {/* Navbar */}
       <div className="bg-green-700 text-white px-4 py-3 shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button onClick={() => setPage('home')} className="font-black text-xl">Kodi<span className="text-green-300">254</span></button>
@@ -687,20 +680,16 @@ export default function App() {
         <div className="max-w-2xl mx-auto p-4 pb-10">
           <h2 className="text-xl font-black text-gray-900 mb-1 mt-2">List Your Property</h2>
           <p className="text-gray-400 text-sm mb-5">Fill in the details and pay a small fee to go live.</p>
-
           {submitted && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-4 rounded-2xl mb-4 text-center font-medium">🎉 Listing submitted! Redirecting...</div>}
-
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex gap-2 mb-5">
               <button onClick={() => setForm({ ...form, type: 'rental' })} className={form.type === 'rental' ? 'flex-1 py-3 rounded-2xl bg-green-600 text-white font-black text-sm' : 'flex-1 py-3 rounded-2xl bg-gray-100 text-gray-400 font-medium text-sm'}>🏠 Long Stay</button>
               <button onClick={() => setForm({ ...form, type: 'airbnb' })} className={form.type === 'airbnb' ? 'flex-1 py-3 rounded-2xl bg-orange-500 text-white font-black text-sm' : 'flex-1 py-3 rounded-2xl bg-gray-100 text-gray-400 font-medium text-sm'}>🏨 Short Stay</button>
             </div>
-
             <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 mb-5 flex items-center gap-2">
               <span>💡</span>
               <p className="text-amber-700 text-sm"><strong>Listing fee:</strong> {form.type === 'airbnb' ? 'KES 500' : 'KES 300'} · Pay via M-Pesa · 30 days</p>
             </div>
-
             {[
               ['Property title', 'title', 'text', 'e.g. Spacious 2 Bedroom in Kisii Town'],
               ['Location / Town', 'location', 'text', 'e.g. Kisii, Nairobi, Nakuru'],
@@ -712,7 +701,6 @@ export default function App() {
                 <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder={placeholder} type={type} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} />
               </div>
             ))}
-
             <div className="mb-4">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Bedrooms</label>
               <select className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" value={form.bedrooms} onChange={e => setForm({ ...form, bedrooms: e.target.value })}>
@@ -722,12 +710,10 @@ export default function App() {
                 <option value="4">4+ Bedrooms</option>
               </select>
             </div>
-
             <div className="mb-4">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Description</label>
               <textarea className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 h-24 resize-none text-sm" placeholder="Describe the property — size, condition, nearby facilities, water availability..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
-
             {form.type === 'airbnb' && (
               <div className="mb-4">
                 <label className="block text-gray-600 font-semibold text-sm mb-2">Amenities</label>
@@ -738,7 +724,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
             <div className="mb-5">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Photos <span className="text-gray-400 font-normal">(up to 5)</span></label>
               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -752,9 +737,7 @@ export default function App() {
                 </div>
               )}
             </div>
-
             {uploadProgress && <p className="text-blue-600 text-sm mb-3 text-center">{uploadProgress}</p>}
-
             <button onClick={handleSubmit} disabled={submitting} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-black text-base disabled:opacity-50 transition-all active:scale-95">
               {submitting ? '⏳ Please wait...' : `Continue to Payment · KES ${form.type === 'airbnb' ? '500' : '300'} →`}
             </button>
