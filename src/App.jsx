@@ -3,7 +3,20 @@ import { db } from './firebase'
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import L from 'leaflet' // 1. Import Leaflet object to fix icon paths
 import 'leaflet/dist/leaflet.css'
+
+// 2. Fix default marker icon bug in Leaflet with Vite/Webpack
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+})
 
 const auth = getAuth()
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg4dwedsi"
@@ -253,6 +266,7 @@ function ListingCard({ listing }) {
           {expanded ? '▲ collapse' : '▼ show map'}
         </button>
 
+        {/* 3. Wrap MapContainer in conditional cleanly without breaking Leaflet view dimensions */}
         {expanded && (
           <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
             <MapContainer center={position} zoom={listing.lat ? 14 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
@@ -362,7 +376,7 @@ function HomePage({ listings, setPage, setFilter }) {
     { name: "Mike", location: "Chuka", emoji: "😊", rating: 5, text: "Niliamua kutumia Kodi254 baada ya kushindwa kupata nyumba kwa wiki mbili. Siku moja tu, nilikuwa na mawasiliano ya mwenye nyumba mzuri Chuka town. Ilikuwa rahisi sana na bei ya kuona nyumba ilikuwa ya chini kabisa." },
     { name: "Masese", location: "Nairobi", emoji: "🙌", rating: 5, text: "Nilikuwa nikiangalia nyumba Nairobi kwa muda mrefu. Agents walikuwa wananiomba pesa nyingi bila kitu. Kodi254 ilinisaidia kupata nyumba bila agent fees. Highly recommended kwa kila mtu!" },
     { name: "Brandon", location: "Kisii", emoji: "👏", rating: 5, text: "I listed my house on Kodi254 and within 3 days I already had a serious tenant contacting me. The platform is straightforward and the M-Pesa payment system makes everything smooth. Worth every shilling." },
-    { name: "Mong'ina", location: "Kisii", emoji: "🎉", rating: 5, text: "Nilikuwa na nyumba yangu ikiwa wazi kwa miezi miwili. Baada ya kuweka kwenye Kodi254, nilipata mpangaji ndani ya wiki moja tu. Bei ya kuweka listing ni ya chini sana ukilinganisha na faida unayopata." },
+    { name: "Mong'ina", location: "Kisii", emoji: "🎉", rating: 5, text: "Nilikuwa na nyumba yangu ikiwa wazi kwa miezi miwili. Baada ya kuweka kwenye Kodi254, nilpata mpangaji ndani ya wiki moja tu. Bei ya kuweka listing ni ya chini sana ukilinganisha na faida unayopata." },
   ]
 
   return (
@@ -584,11 +598,12 @@ export default function App() {
       setUploadProgress('Getting location...')
       const coords = await getCoordinates(form.location)
       setUploadProgress('Saving listing...')
+      
       const newListing = {
         title: String(form.title || ''),
         location: String(form.location || ''),
-        price: parseInt(form.price) || 0,
-        bedrooms: parseInt(form.bedrooms) || 1,
+        price: parseInt(form.price, 10) || 0, // Explicit radix parameter added
+        bedrooms: parseInt(form.bedrooms, 10) || 1, // Explicit radix parameter added
         phone: String(form.phone || ''),
         description: String(form.description || ''),
         type: String(form.type || 'rental'),
