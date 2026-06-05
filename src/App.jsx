@@ -3,33 +3,18 @@ import { db } from './firebase'
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-})
-
 const auth = getAuth()
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg4dwedsi"
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_preset"
 const MPESA_NUMBER = "0724380481"
 
-// HARDCODED PIPELINE TO GUARANTEE IMAGE RENDERING ON PRODUCTION
 async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
-  formData.append("upload_preset", "kodi254_preset")
-  
-  const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", { 
-    method: "POST", 
-    body: formData 
-  })
+  formData.append("upload_preset", UPLOAD_PRESET)
+  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
   const data = await res.json()
   return data.secure_url
 }
@@ -40,9 +25,7 @@ async function getCoordinates(location) {
       headers: { 'Accept-Language': 'en' }
     })
     const data = await res.json()
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
-    }
+    if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
   } catch (e) { console.error('Geocoding error:', e) }
   return { lat: -0.6831, lng: 37.0 }
 }
@@ -204,26 +187,48 @@ function ListingCard({ listing }) {
   const isAirbnb = listing.type === 'airbnb'
   const position = listing.lat && listing.lng ? [listing.lat, listing.lng] : [-0.6831, 37.0]
 
+  // Fix: safely get images array
+  const images = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.length > 0) : []
+
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
 
-      {listing.images && listing.images.length > 0 ? (
-        <div className="relative w-full h-52 overflow-hidden">
-          <img src={listing.images[imgIndex]} alt="house" className="w-full h-full object-cover transition-opacity duration-300" />
-          {listing.images.length > 1 && (
+      {/* Image section */}
+      {images.length > 0 ? (
+        <div className="relative w-full h-52 bg-gray-100 overflow-hidden">
+          <img
+            src={images[imgIndex]}
+            alt={listing.title}
+            className="w-full h-full object-cover"
+            onError={(e) => { e.target.style.display = 'none' }}
+          />
+          {images.length > 1 && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1) }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10">❮</button>
-              <button onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === listing.images.length - 1 ? 0 : prev + 1) }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 z-10">❯</button>
-              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">{imgIndex + 1} / {listing.images.length}</div>
+              <button
+                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === 0 ? images.length - 1 : prev - 1) }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10"
+              >❮</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === images.length - 1 ? 0 : prev + 1) }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10"
+              >❯</button>
+              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                {imgIndex + 1} / {images.length}
+              </div>
             </>
           )}
           {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>}
-          {listing.status === 'taken' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span></div>}
+          {listing.status === 'taken' && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="w-full h-52 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
-          <span className="text-5xl">{isAirbnb ? '🏨' : '🏠'}</span>
+        <div className="w-full h-36 bg-gradient-to-br from-green-100 to-emerald-50 flex flex-col items-center justify-center">
+          <span className="text-5xl mb-1">{isAirbnb ? '🏨' : '🏠'}</span>
+          <span className="text-gray-400 text-xs">No photos uploaded</span>
         </div>
       )}
 
@@ -231,7 +236,7 @@ function ListingCard({ listing }) {
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-gray-900 flex-1 pr-3">{listing.title}</h3>
           <div className="text-right flex-shrink-0">
-            <p className={isAirbnb ? "text-orange-600 font-black" : "text-green-700 font-black"}>KES {listing.price.toLocaleString()}</p>
+            <p className={isAirbnb ? "text-orange-600 font-black" : "text-green-700 font-black"}>KES {Number(listing.price).toLocaleString()}</p>
             <p className="text-gray-400 text-xs">{isAirbnb ? 'per night' : 'per month'}</p>
           </div>
         </div>
@@ -252,12 +257,14 @@ function ListingCard({ listing }) {
         {listing.description && (
           <p className="text-gray-500 text-sm mb-3 leading-relaxed">
             {expanded ? listing.description : listing.description.substring(0, 90) + (listing.description.length > 90 ? '...' : '')}
-            {listing.description.length > 90 && <button onClick={() => setExpanded(!expanded)} className="text-green-600 font-medium ml-1">{expanded ? 'less' : 'more'}</button>}
+            {listing.description.length > 90 && (
+              <button onClick={() => setExpanded(!expanded)} className="text-green-600 font-medium ml-1">{expanded ? 'less' : 'more'}</button>
+            )}
           </p>
         )}
 
         {listing.status !== 'taken' ? (
-          <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all" : "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-all"}>
+          <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm" : "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm"}>
             {isAirbnb ? '🏨 Book Now' : '🔍 Request Viewing · KES 250'}
           </button>
         ) : (
@@ -273,10 +280,7 @@ function ListingCard({ listing }) {
             <MapContainer center={position} zoom={listing.lat ? 14 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <Marker position={position}>
-                <Popup>
-                  <strong>{listing.title}</strong><br />
-                  📍 {listing.location}
-                </Popup>
+                <Popup><strong>{listing.title}</strong><br />📍 {listing.location}</Popup>
               </Marker>
             </MapContainer>
           </div>
@@ -310,7 +314,9 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
       )}
       {myListings.map(listing => (
         <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
-          {listing.images && listing.images.length > 0 && <img src={listing.images[0]} alt="house" className="w-full h-44 object-cover" />}
+          {Array.isArray(listing.images) && listing.images.length > 0 && (
+            <img src={listing.images[0]} alt="house" className="w-full h-44 object-cover" onError={e => e.target.style.display = 'none'} />
+          )}
           <div className="p-4">
             <div className="flex items-start justify-between mb-2">
               <h3 className="font-bold text-gray-900 flex-1 pr-2">{listing.title}</h3>
@@ -319,7 +325,7 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
               </span>
             </div>
             <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
-            <p className="text-gray-700 font-bold text-sm mb-4">{listing.type === 'airbnb' ? 'KES ' + listing.price.toLocaleString() + '/night' : 'KES ' + listing.price.toLocaleString() + '/month'}</p>
+            <p className="text-gray-700 font-bold text-sm mb-4">{listing.type === 'airbnb' ? 'KES ' + Number(listing.price).toLocaleString() + '/night' : 'KES ' + Number(listing.price).toLocaleString() + '/month'}</p>
             <div className="flex gap-2">
               <button onClick={() => toggleStatus(listing)} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200'}>
                 {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
@@ -377,7 +383,7 @@ function HomePage({ listings, setPage, setFilter }) {
     { name: "Mike", location: "Chuka", emoji: "😊", rating: 5, text: "Niliamua kutumia Kodi254 baada ya kushindwa kupata nyumba kwa wiki mbili. Siku moja tu, nilikuwa na mawasiliano ya mwenye nyumba mzuri Chuka town. Ilikuwa rahisi sana na bei ya kuona nyumba ilikuwa ya chini kabisa." },
     { name: "Masese", location: "Nairobi", emoji: "🙌", rating: 5, text: "Nilikuwa nikiangalia nyumba Nairobi kwa muda mrefu. Agents walikuwa wananiomba pesa nyingi bila kitu. Kodi254 ilinisaidia kupata nyumba bila agent fees. Highly recommended kwa kila mtu!" },
     { name: "Brandon", location: "Kisii", emoji: "👏", rating: 5, text: "I listed my house on Kodi254 and within 3 days I already had a serious tenant contacting me. The platform is straightforward and the M-Pesa payment system makes everything smooth. Worth every shilling." },
-    { name: "Mong'ina", location: "Kisii", emoji: "🎉", rating: 5, text: "Nilikuwa na nyumba yangu ikiwa wazi kwa miezi miwili. Baada ya kuweka kwenye Kodi254, nilpata mpangaji ndani ya wiki moja tu. Bei ya kuweka listing ni ya chini sana ukilinganisha na faida unayopata." },
+    { name: "Mong'ina", location: "Kisii", emoji: "🎉", rating: 5, text: "Nilikuwa na nyumba yangu ikiwa wazi kwa miezi miwili. Baada ya kuweka kwenye Kodi254, nilipata mpangaji ndani ya wiki moja tu. Bei ya kuweka listing ni ya chini sana ukilinganisha na faida unayopata." },
   ]
 
   return (
@@ -422,7 +428,7 @@ function HomePage({ listings, setPage, setFilter }) {
             {[
               ['🔍', 'Search & Browse', 'Browse verified listings across Kenya. Filter by town, price and type.'],
               ['📱', 'Pay via M-Pesa', 'Pay KES 250 via M-Pesa STK Push — a prompt comes straight to your phone.'],
-              ['📞', 'Get Landlord Contact', 'We send you the landlord\'s WhatsApp number within 30 minutes. No middlemen.'],
+              ['📞', 'Get Landlord Contact', "We send you the landlord's WhatsApp number within 30 minutes. No middlemen."],
             ].map(([icon, title, desc], i) => (
               <div key={i} className="flex gap-4 items-start">
                 <div className="bg-green-50 rounded-2xl w-14 h-14 flex items-center justify-center text-2xl flex-shrink-0 border border-green-100">{icon}</div>
@@ -529,7 +535,7 @@ function HomePage({ listings, setPage, setFilter }) {
         <p className="text-gray-400 text-sm mb-1">Kenya's trusted property platform</p>
         <p className="text-gray-500 text-xs mb-6">kodikenya254@gmail.com · 0724 380 481</p>
         <div className="border-t border-gray-800 pt-4 flex justify-center gap-6 text-gray-500 text-xs">
-          <span>©️ 2026 Kodi254</span>
+          <span>© 2026 Kodi254</span>
           <span>Made with ❤️ in Kenya</span>
         </div>
       </div>
@@ -594,37 +600,30 @@ export default function App() {
       let imageUrls = []
       for (let i = 0; i < images.length; i++) {
         setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...')
-        imageUrls.push(await uploadImage(images[i]))
+        const url = await uploadImage(images[i])
+        if (url) imageUrls.push(url)
       }
       setUploadProgress('Getting location...')
       const coords = await getCoordinates(form.location)
       setUploadProgress('Saving listing...')
-      
-      const rawListing = {
+      const newListing = {
         title: String(form.title || ''),
         location: String(form.location || ''),
-        price: parseInt(form.price, 10) || 0,
-        bedrooms: parseInt(form.bedrooms, 10) || 1,
+        price: parseInt(form.price) || 0,
+        bedrooms: parseInt(form.bedrooms) || 1,
         phone: String(form.phone || ''),
         description: String(form.description || ''),
         type: String(form.type || 'rental'),
-        amenities: form.type === 'airbnb' ? (amenities || []) : [],
-        images: imageUrls || [],
-        lat: coords && typeof coords.lat === 'number' ? coords.lat : -0.6831,
-        lng: coords && typeof coords.lng === 'number' ? coords.lng : 37.0,
+        amenities: form.type === 'airbnb' ? amenities : [],
+        images: imageUrls,
+        lat: coords.lat,
+        lng: coords.lng,
         createdAt: new Date(),
-        landlordEmail: String((user && user.email) || ''),
+        landlordEmail: String(user.email || ''),
         status: 'available'
       }
-
-      const sanitizedListing = JSON.parse(JSON.stringify(rawListing, (key, val) => 
-        val === undefined ? null : val
-      ))
-      
-      sanitizedListing.createdAt = new Date()
-
-      const docRef = await addDoc(collection(db, 'listings'), sanitizedListing)
-      setListings([{ id: docRef.id, ...sanitizedListing }, ...listings])
+      const docRef = await addDoc(collection(db, 'listings'), newListing)
+      setListings([{ id: docRef.id, ...newListing }, ...listings])
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
       setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
