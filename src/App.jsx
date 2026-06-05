@@ -11,12 +11,18 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_
 const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("upload_preset", UPLOAD_PRESET)
-  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
-  const data = await res.json()
-  return data.secure_url
+  try {
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("upload_preset", UPLOAD_PRESET)
+    const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
+    if (!res.ok) throw new Error('Cloudinary upload status failed')
+    const data = await res.json()
+    return data.secure_url || null
+  } catch (e) {
+    console.error("Cloudinary upload catch error:", e)
+    return null
+  }
 }
 
 async function getCoordinates(location) {
@@ -187,7 +193,7 @@ function ListingCard({ listing }) {
   const isAirbnb = listing.type === 'airbnb'
   const position = listing.lat && listing.lng ? [listing.lat, listing.lng] : [-0.6831, 37.0]
 
-  const images = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.length > 0) : []
+  const images = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
   const hasImages = images.length > 0
 
   return (
@@ -323,7 +329,7 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
         </div>
       )}
       {myListings.map(listing => {
-        const dashboardImages = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.length > 0) : []
+        const dashboardImages = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
         const hasDashboardImages = dashboardImages.length > 0
 
         return (
@@ -634,37 +640,49 @@ export default function App() {
     setShowLandlordPayment(false); setSubmitting(true)
     try {
       let imageUrls = []
-      for (let i = 0; i < images.length; i++) {
-        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...')
-        const url = await uploadImage(images[i])
-        if (url) imageUrls.push(url)
+      
+      // Fixed processing loops safely referencing the state tracking array explicitly
+      const filesToUpload = [...images]
+      for (let i = 0; i < filesToUpload.length; i++) {
+        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + filesToUpload.length + '...')
+        const url = await uploadImage(filesToUpload[i])
+        if (url && typeof url === 'string') {
+          imageUrls.push(url)
+        }
       }
+      
       setUploadProgress('Getting location...')
       const coords = await getCoordinates(form.location)
       setUploadProgress('Saving listing...')
+      
       const newListing = {
-        title: String(form.title || ''),
-        location: String(form.location || ''),
+        title: String(form.title || '').trim(),
+        location: String(form.location || '').trim(),
         price: parseInt(form.price) || 0,
         bedrooms: parseInt(form.bedrooms) || 1,
-        phone: String(form.phone || ''),
-        description: String(form.description || ''),
+        phone: String(form.phone || '').trim(),
+        description: String(form.description || '').trim(),
         type: String(form.type || 'rental'),
-        amenities: form.type === 'airbnb' ? amenities : [],
+        amenities: form.type === 'airbnb' ? [...amenities] : [],
         images: imageUrls,
         lat: coords.lat,
         lng: coords.lng,
         createdAt: new Date(),
-        landlordEmail: String(user.email || ''),
+        landlordEmail: String(user?.email || ''),
         status: 'available'
       }
+      
       const docRef = await addDoc(collection(db, 'listings'), newListing)
-      setListings([{ id: docRef.id, ...newListing }, ...listings])
+      setListings(prevListings => [{ id: docRef.id, ...newListing }, ...prevListings])
+      
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
       setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
-    } catch (e) { alert('Error: ' + e.message); console.error(e) }
+    } catch (e) { 
+      alert('Error saving listing: ' + e.message)
+      console.error(e) 
+    }
     setSubmitting(false)
   }
 
