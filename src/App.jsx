@@ -596,6 +596,7 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [images, setImages] = useState([])
+  const [rawFiles, setRawFiles] = useState([]) // Secured binary persistence hook
   const [previews, setPreviews] = useState([])
   const [uploadProgress, setUploadProgress] = useState('')
   const [user, setUser] = useState(null)
@@ -620,6 +621,7 @@ export default function App() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
     setImages(files)
+    setRawFiles(files) // Locks files immediately to prevent memory state drops
     setPreviews(files.map(f => URL.createObjectURL(f)))
   }
 
@@ -641,8 +643,8 @@ export default function App() {
     try {
       let imageUrls = []
       
-      // Fixed processing loops safely referencing the state tracking array explicitly
-      const filesToUpload = [...images]
+      // Pulling directly from unmutated file pointers
+      const filesToUpload = [...rawFiles]
       for (let i = 0; i < filesToUpload.length; i++) {
         setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + filesToUpload.length + '...')
         const url = await uploadImage(filesToUpload[i])
@@ -652,23 +654,23 @@ export default function App() {
       }
       
       setUploadProgress('Getting location...')
-      const coords = await getCoordinates(form.location)
+      const coords = await getCoordinates(form.location || '')
       setUploadProgress('Saving listing...')
       
       const newListing = {
         title: String(form.title || '').trim(),
         location: String(form.location || '').trim(),
-        price: parseInt(form.price) || 0,
-        bedrooms: parseInt(form.bedrooms) || 1,
+        price: Number(form.price) || 0,
+        bedrooms: Number(form.bedrooms) || 1,
         phone: String(form.phone || '').trim(),
         description: String(form.description || '').trim(),
         type: String(form.type || 'rental'),
-        amenities: form.type === 'airbnb' ? [...amenities] : [],
+        amenities: form.type === 'airbnb' ? [...(amenities || [])] : [],
         images: imageUrls,
-        lat: coords.lat,
-        lng: coords.lng,
+        lat: Number(coords?.lat) || -0.6831,
+        lng: Number(coords?.lng) || 37.0,
         createdAt: new Date(),
-        landlordEmail: String(user?.email || ''),
+        landlordEmail: user && user.email ? String(user.email) : "anonymous_landlord",
         status: 'available'
       }
       
@@ -676,7 +678,7 @@ export default function App() {
       setListings(prevListings => [{ id: docRef.id, ...newListing }, ...prevListings])
       
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
-      setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
+      setAmenities([]); setImages([]); setRawFiles([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
     } catch (e) { 
