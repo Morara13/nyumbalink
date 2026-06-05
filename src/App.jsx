@@ -587,6 +587,7 @@ export default function App() {
     setShowLandlordPayment(true)
   }
 
+  // FIXED SUBMISSION HANDLER BELOW
   const submitListing = async () => {
     setShowLandlordPayment(false); setSubmitting(true)
     try {
@@ -599,24 +600,34 @@ export default function App() {
       const coords = await getCoordinates(form.location)
       setUploadProgress('Saving listing...')
       
-      const newListing = {
+      // 1. Explicitly clean raw object values using fallback operators to ensure nothing resolves as 'undefined'
+      const rawListing = {
         title: String(form.title || ''),
         location: String(form.location || ''),
-        price: parseInt(form.price, 10) || 0, // Explicit radix parameter added
-        bedrooms: parseInt(form.bedrooms, 10) || 1, // Explicit radix parameter added
+        price: parseInt(form.price, 10) || 0,
+        bedrooms: parseInt(form.bedrooms, 10) || 1,
         phone: String(form.phone || ''),
         description: String(form.description || ''),
         type: String(form.type || 'rental'),
-        amenities: form.type === 'airbnb' ? amenities : [],
-        images: imageUrls,
-        lat: coords.lat,
-        lng: coords.lng,
+        amenities: form.type === 'airbnb' ? (amenities || []) : [],
+        images: imageUrls || [],
+        lat: coords && typeof coords.lat === 'number' ? coords.lat : -0.6831,
+        lng: coords && typeof coords.lng === 'number' ? coords.lng : 37.0,
         createdAt: new Date(),
-        landlordEmail: String(user.email || ''),
+        landlordEmail: String((user && user.email) || ''),
         status: 'available'
       }
-      const docRef = await addDoc(collection(db, 'listings'), newListing)
-      setListings([{ id: docRef.id, ...newListing }, ...listings])
+
+      // 2. Absolute final safety filter sweep that sanitizes any residual undefined object fields into nulls
+      const sanitizedListing = JSON.parse(JSON.stringify(rawListing, (key, val) => 
+        val === undefined ? null : val
+      ))
+      
+      // 3. Make the timestamp object raw again since JSON conversion strings it out
+      sanitizedListing.createdAt = new Date()
+
+      const docRef = await addDoc(collection(db, 'listings'), sanitizedListing)
+      setListings([{ id: docRef.id, ...sanitizedListing }, ...listings])
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
       setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
