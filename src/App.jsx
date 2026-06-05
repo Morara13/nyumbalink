@@ -3,10 +3,9 @@ import { db } from './firebase'
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import L from 'leaflet' // 1. Import Leaflet object to fix icon paths
+import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// 2. Fix default marker icon bug in Leaflet with Vite/Webpack
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
@@ -19,15 +18,18 @@ L.Icon.Default.mergeOptions({
 })
 
 const auth = getAuth()
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg4dwedsi"
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_preset"
 const MPESA_NUMBER = "0724380481"
 
+// HARDCODED PIPELINE TO GUARANTEE IMAGE RENDERING ON PRODUCTION
 async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
-  formData.append("upload_preset", UPLOAD_PRESET)
-  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
+  formData.append("upload_preset", "kodi254_preset")
+  
+  const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", { 
+    method: "POST", 
+    body: formData 
+  })
   const data = await res.json()
   return data.secure_url
 }
@@ -220,7 +222,7 @@ function ListingCard({ listing }) {
           {listing.status === 'taken' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span></div>}
         </div>
       ) : (
-        <div className="w-full h-32 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
+        <div className="w-full h-52 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
           <span className="text-5xl">{isAirbnb ? '🏨' : '🏠'}</span>
         </div>
       )}
@@ -266,7 +268,6 @@ function ListingCard({ listing }) {
           {expanded ? '▲ collapse' : '▼ show map'}
         </button>
 
-        {/* 3. Wrap MapContainer in conditional cleanly without breaking Leaflet view dimensions */}
         {expanded && (
           <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
             <MapContainer center={position} zoom={listing.lat ? 14 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
@@ -528,7 +529,7 @@ function HomePage({ listings, setPage, setFilter }) {
         <p className="text-gray-400 text-sm mb-1">Kenya's trusted property platform</p>
         <p className="text-gray-500 text-xs mb-6">kodikenya254@gmail.com · 0724 380 481</p>
         <div className="border-t border-gray-800 pt-4 flex justify-center gap-6 text-gray-500 text-xs">
-          <span>© 2026 Kodi254</span>
+          <span>©️ 2026 Kodi254</span>
           <span>Made with ❤️ in Kenya</span>
         </div>
       </div>
@@ -587,7 +588,6 @@ export default function App() {
     setShowLandlordPayment(true)
   }
 
-  // FIXED SUBMISSION HANDLER BELOW
   const submitListing = async () => {
     setShowLandlordPayment(false); setSubmitting(true)
     try {
@@ -600,7 +600,6 @@ export default function App() {
       const coords = await getCoordinates(form.location)
       setUploadProgress('Saving listing...')
       
-      // 1. Explicitly clean raw object values using fallback operators to ensure nothing resolves as 'undefined'
       const rawListing = {
         title: String(form.title || ''),
         location: String(form.location || ''),
@@ -618,12 +617,10 @@ export default function App() {
         status: 'available'
       }
 
-      // 2. Absolute final safety filter sweep that sanitizes any residual undefined object fields into nulls
       const sanitizedListing = JSON.parse(JSON.stringify(rawListing, (key, val) => 
         val === undefined ? null : val
       ))
       
-      // 3. Make the timestamp object raw again since JSON conversion strings it out
       sanitizedListing.createdAt = new Date()
 
       const docRef = await addDoc(collection(db, 'listings'), sanitizedListing)
