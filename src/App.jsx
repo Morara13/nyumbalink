@@ -201,18 +201,12 @@ function ListingCard({ listing }) {
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
 
       {hasImages ? (
-        <div className="relative w-full h-52 bg-gray-100 block">
+        <div className="relative w-full h-52 bg-gray-100">
           <img
             src={images[imgIndex]}
             alt={listing.title || "Property Image"}
-            className="w-full h-52 object-cover block min-w-full"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.parentElement.style.display = 'none';
-              if (e.target.parentElement.nextElementSibling) {
-                e.target.parentElement.nextElementSibling.style.setProperty('display', 'flex', 'important');
-              }
-            }}
+            className="w-full h-52 object-cover"
+            onError={(e) => { e.target.style.display = 'none' }}
           />
           {images.length > 1 && (
             <>
@@ -231,22 +225,21 @@ function ListingCard({ listing }) {
               </div>
             </>
           )}
-          {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>}
+          {isAirbnb && (
+            <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>
+          )}
           {listing.status === 'taken' && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span>
             </div>
           )}
         </div>
-      ) : null}
-
-      <div 
-        className="w-full h-52 bg-gradient-to-br from-green-100 to-emerald-50 flex flex-col items-center justify-center" 
-        style={{ display: hasImages ? 'none' : 'flex' }}
-      >
-        <span className="text-5xl mb-1">{isAirbnb ? '🏨' : '🏠'}</span>
-        <span className="text-gray-400 text-xs">No photos uploaded</span>
-      </div>
+      ) : (
+        <div className="w-full h-52 bg-gradient-to-br from-green-100 to-emerald-50 flex flex-col items-center justify-center">
+          <span className="text-5xl mb-1">{isAirbnb ? '🏨' : '🏠'}</span>
+          <span className="text-gray-400 text-xs">No photos uploaded</span>
+        </div>
+      )}
 
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
@@ -335,28 +328,19 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
         return (
           <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden w-full">
             {hasDashboardImages ? (
-              <div className="relative w-full h-44 bg-gray-100 block">
-                <img 
-                  src={dashboardImages[0]} 
-                  alt="house" 
-                  className="w-full h-44 object-cover block min-w-full" 
-                  onError={(e) => { 
-                    e.target.onerror = null; 
-                    e.target.parentElement.style.display = 'none';
-                    if (e.target.parentElement.nextElementSibling) {
-                      e.target.parentElement.nextElementSibling.style.setProperty('display', 'flex', 'important');
-                    }
-                  }} 
+              <div className="relative w-full h-44 bg-gray-100">
+                <img
+                  src={dashboardImages[0]}
+                  alt="house"
+                  className="w-full h-44 object-cover"
+                  onError={(e) => { e.target.style.display = 'none' }}
                 />
               </div>
-            ) : null}
-            
-            <div 
-              className="w-full h-44 bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center text-4xl"
-              style={{ display: hasDashboardImages ? 'none' : 'flex' }}
-            >
-              {listing.type === 'airbnb' ? '🏨' : '🏠'}
-            </div>
+            ) : (
+              <div className="w-full h-44 bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center text-4xl">
+                {listing.type === 'airbnb' ? '🏨' : '🏠'}
+              </div>
+            )}
 
             <div className="p-4">
               <div className="flex items-start justify-between mb-2">
@@ -596,7 +580,7 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [images, setImages] = useState([])
-  const [rawFiles, setRawFiles] = useState([]) // Secured binary persistence hook
+  const [rawFiles, setRawFiles] = useState([])
   const [previews, setPreviews] = useState([])
   const [uploadProgress, setUploadProgress] = useState('')
   const [user, setUser] = useState(null)
@@ -621,7 +605,7 @@ export default function App() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
     setImages(files)
-    setRawFiles(files) // Locks files immediately to prevent memory state drops
+    setRawFiles(files)
     setPreviews(files.map(f => URL.createObjectURL(f)))
   }
 
@@ -642,21 +626,15 @@ export default function App() {
     setShowLandlordPayment(false); setSubmitting(true)
     try {
       let imageUrls = []
-      
-      // Pulling directly from unmutated file pointers
       const filesToUpload = [...rawFiles]
       for (let i = 0; i < filesToUpload.length; i++) {
         setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + filesToUpload.length + '...')
         const url = await uploadImage(filesToUpload[i])
-        if (url && typeof url === 'string') {
-          imageUrls.push(url)
-        }
+        if (url && typeof url === 'string') { imageUrls.push(url) }
       }
-      
       setUploadProgress('Getting location...')
       const coords = await getCoordinates(form.location || '')
       setUploadProgress('Saving listing...')
-      
       const newListing = {
         title: String(form.title || '').trim(),
         location: String(form.location || '').trim(),
@@ -673,17 +651,15 @@ export default function App() {
         landlordEmail: user && user.email ? String(user.email) : "anonymous_landlord",
         status: 'available'
       }
-      
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings(prevListings => [{ id: docRef.id, ...newListing }, ...prevListings])
-      
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
       setAmenities([]); setImages([]); setRawFiles([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
-    } catch (e) { 
+    } catch (e) {
       alert('Error saving listing: ' + e.message)
-      console.error(e) 
+      console.error(e)
     }
     setSubmitting(false)
   }
