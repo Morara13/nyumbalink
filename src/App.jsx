@@ -187,31 +187,38 @@ function ListingCard({ listing }) {
   const isAirbnb = listing.type === 'airbnb'
   const position = listing.lat && listing.lng ? [listing.lat, listing.lng] : [-0.6831, 37.0]
 
-  // Fix: safely get images array
   const images = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.length > 0) : []
+  const hasImages = images.length > 0
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden w-full">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
 
-      {/* Image section */}
-      {images.length > 0 ? (
-        <div className="relative w-full h-52 bg-gray-100 overflow-hidden">
+      {hasImages ? (
+        <div className="relative w-full h-52 bg-gray-100 block">
           <img
             src={images[imgIndex]}
-            alt={listing.title}
-            className="w-full h-full object-cover"
-            onError={(e) => { e.target.style.display = 'none' }}
+            alt={listing.title || "Property Image"}
+            className="w-full h-52 object-cover block min-w-full"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.parentElement.style.display = 'none';
+              if (e.target.parentElement.nextElementSibling) {
+                e.target.parentElement.nextElementSibling.style.setProperty('display', 'flex', 'important');
+              }
+            }}
           />
           {images.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === 0 ? images.length - 1 : prev - 1) }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 hover:bg-black/70"
               >❮</button>
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === images.length - 1 ? 0 : prev + 1) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 hover:bg-black/70"
               >❯</button>
               <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
                 {imgIndex + 1} / {images.length}
@@ -225,12 +232,15 @@ function ListingCard({ listing }) {
             </div>
           )}
         </div>
-      ) : (
-        <div className="w-full h-36 bg-gradient-to-br from-green-100 to-emerald-50 flex flex-col items-center justify-center">
-          <span className="text-5xl mb-1">{isAirbnb ? '🏨' : '🏠'}</span>
-          <span className="text-gray-400 text-xs">No photos uploaded</span>
-        </div>
-      )}
+      ) : null}
+
+      <div 
+        className="w-full h-52 bg-gradient-to-br from-green-100 to-emerald-50 flex flex-col items-center justify-center" 
+        style={{ display: hasImages ? 'none' : 'flex' }}
+      >
+        <span className="text-5xl mb-1">{isAirbnb ? '🏨' : '🏠'}</span>
+        <span className="text-gray-400 text-xs">No photos uploaded</span>
+      </div>
 
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
@@ -312,29 +322,55 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
           <p className="text-gray-400 text-sm">Add your first property to start earning</p>
         </div>
       )}
-      {myListings.map(listing => (
-        <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
-          {Array.isArray(listing.images) && listing.images.length > 0 && (
-            <img src={listing.images[0]} alt="house" className="w-full h-44 object-cover" onError={e => e.target.style.display = 'none'} />
-          )}
-          <div className="p-4">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-bold text-gray-900 flex-1 pr-2">{listing.title}</h3>
-              <span className={listing.status === 'taken' ? 'bg-red-100 text-red-600 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0' : 'bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0'}>
-                {listing.status === 'taken' ? 'Taken' : 'Available'}
-              </span>
+      {myListings.map(listing => {
+        const dashboardImages = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.length > 0) : []
+        const hasDashboardImages = dashboardImages.length > 0
+
+        return (
+          <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden w-full">
+            {hasDashboardImages ? (
+              <div className="relative w-full h-44 bg-gray-100 block">
+                <img 
+                  src={dashboardImages[0]} 
+                  alt="house" 
+                  className="w-full h-44 object-cover block min-w-full" 
+                  onError={(e) => { 
+                    e.target.onerror = null; 
+                    e.target.parentElement.style.display = 'none';
+                    if (e.target.parentElement.nextElementSibling) {
+                      e.target.parentElement.nextElementSibling.style.setProperty('display', 'flex', 'important');
+                    }
+                  }} 
+                />
+              </div>
+            ) : null}
+            
+            <div 
+              className="w-full h-44 bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center text-4xl"
+              style={{ display: hasDashboardImages ? 'none' : 'flex' }}
+            >
+              {listing.type === 'airbnb' ? '🏨' : '🏠'}
             </div>
-            <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
-            <p className="text-gray-700 font-bold text-sm mb-4">{listing.type === 'airbnb' ? 'KES ' + Number(listing.price).toLocaleString() + '/night' : 'KES ' + Number(listing.price).toLocaleString() + '/month'}</p>
-            <div className="flex gap-2">
-              <button onClick={() => toggleStatus(listing)} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200'}>
-                {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
-              </button>
-              <button onClick={() => deleteListing(listing)} className="px-4 bg-gray-50 text-gray-400 py-2 rounded-xl text-sm border border-gray-200">🗑</button>
+
+            <div className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="font-bold text-gray-900 flex-1 pr-2">{listing.title}</h3>
+                <span className={listing.status === 'taken' ? 'bg-red-100 text-red-600 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0' : 'bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0'}>
+                  {listing.status === 'taken' ? 'Taken' : 'Available'}
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
+              <p className="text-gray-700 font-bold text-sm mb-4">{listing.type === 'airbnb' ? 'KES ' + Number(listing.price).toLocaleString() + '/night' : 'KES ' + Number(listing.price).toLocaleString() + '/month'}</p>
+              <div className="flex gap-2">
+                <button onClick={() => toggleStatus(listing)} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200'}>
+                  {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
+                </button>
+                <button onClick={() => deleteListing(listing)} className="px-4 bg-gray-50 text-gray-400 py-2 rounded-xl text-sm border border-gray-200">🗑</button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
