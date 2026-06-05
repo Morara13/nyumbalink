@@ -6,21 +6,25 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const auth = getAuth()
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg4dwedsi"
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "kodi254_preset"
+const CLOUD_NAME = "dg4dwedsi"
+const UPLOAD_PRESET = "kodi254_preset"
 const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
   try {
     const formData = new FormData()
     formData.append("file", file)
-    formData.append("upload_preset", UPLOAD_PRESET)
-    const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: formData })
-    if (!res.ok) throw new Error('Cloudinary upload status failed')
+    formData.append("upload_preset", "kodi254_preset")
+    const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", {
+      method: "POST",
+      body: formData
+    })
     const data = await res.json()
+    console.log("Cloudinary response:", data)
+    if (!res.ok) throw new Error('Cloudinary upload failed: ' + (data.error?.message || res.status))
     return data.secure_url || null
   } catch (e) {
-    console.error("Cloudinary upload catch error:", e)
+    console.error("Cloudinary upload error:", e)
     return null
   }
 }
@@ -324,7 +328,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
       {myListings.map(listing => {
         const dashboardImages = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
         const hasDashboardImages = dashboardImages.length > 0
-
         return (
           <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden w-full">
             {hasDashboardImages ? (
@@ -341,7 +344,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
                 {listing.type === 'airbnb' ? '🏨' : '🏠'}
               </div>
             )}
-
             <div className="p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-bold text-gray-900 flex-1 pr-2">{listing.title}</h3>
@@ -579,7 +581,6 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [images, setImages] = useState([])
   const [rawFiles, setRawFiles] = useState([])
   const [previews, setPreviews] = useState([])
   const [uploadProgress, setUploadProgress] = useState('')
@@ -595,7 +596,7 @@ export default function App() {
     try {
       const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'))
       const snapshot = await getDocs(q)
-      setListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setListings(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch (e) { console.error(e) }
     setLoading(false)
   }
@@ -604,7 +605,6 @@ export default function App() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
-    setImages(files)
     setRawFiles(files)
     setPreviews(files.map(f => URL.createObjectURL(f)))
   }
@@ -623,7 +623,8 @@ export default function App() {
   }
 
   const submitListing = async () => {
-    setShowLandlordPayment(false); setSubmitting(true)
+    setShowLandlordPayment(false)
+    setSubmitting(true)
     try {
       let imageUrls = []
       const filesToUpload = [...rawFiles]
@@ -652,9 +653,9 @@ export default function App() {
         status: 'available'
       }
       const docRef = await addDoc(collection(db, 'listings'), newListing)
-      setListings(prevListings => [{ id: docRef.id, ...newListing }, ...prevListings])
+      setListings(prev => [{ id: docRef.id, ...newListing }, ...prev])
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
-      setAmenities([]); setImages([]); setRawFiles([]); setPreviews([]); setUploadProgress('')
+      setAmenities([]); setRawFiles([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
     } catch (e) {
