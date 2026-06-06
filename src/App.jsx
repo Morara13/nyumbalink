@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { db } from './firebase'
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth'
-import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc, where } from 'firebase/firestore'
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth'
+import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -9,6 +9,8 @@ const auth = getAuth()
 const MPESA_NUMBER = "0724380481"
 const LISTING_DAYS = 30
 const ADMIN_EMAIL = "kodikenya254@gmail.com"
+const MAX_FILE_SIZE_MB = 5
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
 
 function isValidKenyanPhone(phone) {
   const cleaned = phone.replace(/\s+/g, '')
@@ -28,6 +30,19 @@ function daysLeft(createdAt) {
 
 function isExpired(createdAt) {
   return daysLeft(createdAt) === 0
+}
+
+function validateImages(files) {
+  const errors = []
+  for (const file of files) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      errors.push(`${file.name} is not a valid image type. Use JPG, PNG or WEBP.`)
+    }
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      errors.push(`${file.name} is too large. Max size is ${MAX_FILE_SIZE_MB}MB.`)
+    }
+  }
+  return errors
 }
 
 async function uploadImage(file) {
@@ -61,6 +76,7 @@ function PaymentModal({ listing, onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mpesaCode, setMpesaCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
 
   const triggerSTK = async () => {
     if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
@@ -78,6 +94,12 @@ function PaymentModal({ listing, onClose }) {
   }
 
   const waLink = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254, I paid KES ${fee} for *${listing.title}* in ${listing.location}. M-Pesa code: ${mpesaCode}. My number: ${phone}`
+
+  const handleSendProof = () => {
+    if (!mpesaCode || mpesaCode.length < 6) { setError('Please enter your M-Pesa confirmation code before sending'); return }
+    setCodeSent(true)
+    setError('')
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-4">
@@ -118,17 +140,28 @@ function PaymentModal({ listing, onClose }) {
                 <p className="text-gray-500 text-sm">Enter your PIN to complete payment.</p>
               </div>
               <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
-                <p className="text-amber-800 font-semibold text-sm mb-1">⚠️ Important</p>
-                <p className="text-amber-700 text-sm">After paying, enter your M-Pesa code below and send us proof on WhatsApp. We verify every payment manually before sending landlord contact.</p>
+                <p className="text-amber-800 font-semibold text-sm mb-1">⚠️ Required — don't skip</p>
+                <p className="text-amber-700 text-sm">Enter your M-Pesa confirmation code below, then send proof on WhatsApp. We verify before sending landlord contact.</p>
               </div>
-              <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code</label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-4 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => setMpesaCode(e.target.value.toUpperCase())} maxLength={12} />
-              <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">
-                📱 Send Proof on WhatsApp
-              </a>
-              <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-500 py-3 rounded-2xl text-sm font-medium">
-                I'll send manually later
-              </button>
+              <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
+              <input
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase"
+                placeholder="e.g. QGH7X8Y9Z0"
+                value={mpesaCode}
+                onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }}
+                maxLength={12}
+              />
+              <p className="text-gray-400 text-xs mb-4">You will find this code in the M-Pesa SMS after paying</p>
+              {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
+              {!codeSent ? (
+                <button onClick={handleSendProof} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">
+                  ✅ Confirm Payment Code
+                </button>
+              ) : (
+                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">
+                  📱 Send Proof on WhatsApp
+                </a>
+              )}
             </div>
           )}
 
@@ -157,6 +190,7 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mpesaCode, setMpesaCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
 
   const triggerSTK = async () => {
     if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
@@ -174,6 +208,12 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
   }
 
   const waLink = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254, I paid KES ${fee} listing fee for *${formData?.title}* in ${formData?.location}. M-Pesa code: ${mpesaCode}. My number: ${phone}`
+
+  const handleConfirmCode = () => {
+    if (!mpesaCode || mpesaCode.length < 6) { setError('Please enter your M-Pesa confirmation code'); return }
+    setCodeSent(true)
+    setError('')
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-4">
@@ -195,7 +235,7 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
                 <p className="text-blue-600 text-xs mt-1">Your listing stays live for 30 days after approval</p>
               </div>
               <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-3 mb-4">
-                <p className="text-yellow-800 text-xs">⚡ Your listing goes live within 30 minutes after we verify your payment.</p>
+                <p className="text-yellow-800 text-xs">⚡ Goes live within 30 minutes after payment verification.</p>
               </div>
               <label className="block text-gray-700 font-semibold mb-2 text-sm">Your M-Pesa Number</label>
               <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-1" placeholder="0712 345 678" value={phone} onChange={e => { setPhone(e.target.value); setError('') }} type="tel" maxLength={12} />
@@ -216,17 +256,28 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
                 <p className="text-gray-500 text-sm">Prompt sent to <strong>{phone}</strong>. Enter your PIN.</p>
               </div>
               <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
-                <p className="text-amber-800 font-semibold text-sm mb-1">⚠️ Don't skip this step</p>
-                <p className="text-amber-700 text-sm">Enter your M-Pesa code after paying and send us proof on WhatsApp. We will approve your listing within 30 minutes.</p>
+                <p className="text-amber-800 font-semibold text-sm mb-1">⚠️ Required — don't skip</p>
+                <p className="text-amber-700 text-sm">Enter your M-Pesa code and send proof on WhatsApp. We approve your listing within 30 minutes.</p>
               </div>
-              <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code</label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-4 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => setMpesaCode(e.target.value.toUpperCase())} maxLength={12} />
-              <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">
-                📱 Send Proof on WhatsApp
-              </a>
-              <button onClick={() => setStep(3)} className="w-full bg-gray-100 text-gray-500 py-3 rounded-2xl text-sm font-medium">
-                I'll send manually later
-              </button>
+              <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
+              <input
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase"
+                placeholder="e.g. QGH7X8Y9Z0"
+                value={mpesaCode}
+                onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }}
+                maxLength={12}
+              />
+              <p className="text-gray-400 text-xs mb-4">Check your M-Pesa SMS for this code</p>
+              {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
+              {!codeSent ? (
+                <button onClick={handleConfirmCode} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">
+                  ✅ Confirm Payment Code
+                </button>
+              ) : (
+                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">
+                  📱 Send Proof on WhatsApp
+                </a>
+              )}
             </div>
           )}
 
@@ -325,6 +376,17 @@ function ListingCard({ listing }) {
 
 // ── Admin Panel ───────────────────────────────────────────────────────────────
 function AdminPanel({ user, allListings, onUpdate }) {
+  // Double check admin on component level
+  if (!user || user.email !== ADMIN_EMAIL) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-5xl mb-3">🚫</div>
+        <p className="text-gray-700 font-bold">Access Denied</p>
+        <p className="text-gray-400 text-sm mt-1">You don't have permission to view this page.</p>
+      </div>
+    )
+  }
+
   const pending = allListings.filter(l => l.status === 'pending')
   const active = allListings.filter(l => l.status === 'available')
   const taken = allListings.filter(l => l.status === 'taken')
@@ -346,7 +408,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
         <h2 className="text-xl font-black text-gray-900">Admin Panel</h2>
         <p className="text-gray-400 text-sm">Manage all listings and payments</p>
       </div>
-
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-3 text-center">
           <p className="text-2xl font-black text-yellow-600">{pending.length}</p>
@@ -362,7 +423,7 @@ function AdminPanel({ user, allListings, onUpdate }) {
         </div>
       </div>
 
-      {pending.length > 0 && (
+      {pending.length > 0 ? (
         <div className="mb-6">
           <h3 className="font-bold text-gray-700 mb-3 text-sm">⏳ Awaiting Approval</h3>
           {pending.map(listing => (
@@ -382,9 +443,7 @@ function AdminPanel({ user, allListings, onUpdate }) {
             </div>
           ))}
         </div>
-      )}
-
-      {pending.length === 0 && (
+      ) : (
         <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 mb-6">
           <div className="text-3xl mb-2">🎉</div>
           <p className="text-gray-500 text-sm">No pending listings!</p>
@@ -461,7 +520,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
               </div>
               <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
               <p className="text-gray-700 font-bold text-sm mb-2">KES {Number(listing.price).toLocaleString()}{listing.type === 'airbnb' ? '/night' : '/month'}</p>
-
               {isPending && (
                 <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-2 mb-3">
                   <p className="text-yellow-700 text-xs font-medium">⏳ Awaiting payment verification — goes live within 30 min</p>
@@ -477,7 +535,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
                   <p className="text-gray-400 text-xs">⏳ {days} day{days !== 1 ? 's' : ''} remaining</p>
                 </div>
               )}
-
               <div className="flex gap-2">
                 <button onClick={() => toggleStatus(listing)} disabled={expired || isPending} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200 disabled:opacity-40' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200 disabled:opacity-40'}>
                   {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
@@ -506,19 +563,11 @@ function AuthPage({ onAuth }) {
     setError(''); setSuccess(''); setLoading(true)
     try {
       if (mode === 'login') {
-        const cred = await signInWithEmailAndPassword(auth, email, password)
-        if (!cred.user.emailVerified) {
-          await signOut(auth)
-          setError('Please verify your email first. Check your inbox.')
-          setLoading(false); return
-        }
+        await signInWithEmailAndPassword(auth, email, password)
         onAuth()
       } else {
-        const cred = await createUserWithEmailAndPassword(auth, email, password)
-        await sendEmailVerification(cred.user)
-        await signOut(auth)
-        setSuccess('Account created! Check your email to verify before logging in.')
-        setMode('login')
+        await createUserWithEmailAndPassword(auth, email, password)
+        onAuth()
       }
     } catch (e) { setError(e.message.replace('Firebase: ', '')) }
     setLoading(false)
@@ -563,7 +612,6 @@ function AuthPage({ onAuth }) {
         <button onClick={handleSubmit} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-black text-lg disabled:opacity-50 mt-2">
           {loading ? 'Please wait...' : mode === 'login' ? 'Login →' : 'Create Account →'}
         </button>
-        {mode === 'register' && <p className="text-gray-400 text-xs text-center mt-3">You will receive a verification email before you can login.</p>}
       </div>
     </div>
   )
@@ -755,6 +803,8 @@ export default function App() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
+    const errors = validateImages(files)
+    if (errors.length > 0) { alert(errors.join('\n')); e.target.value = ''; return }
     setImages(files)
     setPreviews(files.map(f => URL.createObjectURL(f)))
   }
@@ -788,7 +838,6 @@ export default function App() {
       setUploadProgress('Getting location...')
       const coords = await getCoordinates(form.address || '', form.location || '')
       setUploadProgress('Saving listing...')
-
       const newListing = {
         title: sanitize(form.title),
         location: sanitize(form.location),
@@ -804,9 +853,8 @@ export default function App() {
         lng: Number(coords?.lng) || 37.0,
         createdAt: new Date(),
         landlordEmail: user?.email || '',
-        status: 'pending'  // Always starts as pending — goes live after admin approval
+        status: 'pending'
       }
-
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings(prev => [{ id: docRef.id, ...newListing }, ...prev])
       setForm({ title: '', location: '', address: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
@@ -820,8 +868,15 @@ export default function App() {
     setSubmitting(false)
   }
 
+  // Safe page navigation — redirects unauthorized users
+  const navigateTo = (target) => {
+    if (target === 'admin' && !isAdmin) return
+    if ((target === 'dashboard' || target === 'list') && !user) { setPage('auth'); return }
+    setPage(target)
+  }
+
   const navBtn = (target, label) => (
-    <button onClick={() => setPage(target)} className={page === target ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600 transition-colors'}>
+    <button onClick={() => navigateTo(target)} className={page === target ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600 transition-colors'}>
       {label}
     </button>
   )
@@ -857,8 +912,9 @@ export default function App() {
 
       {page === 'home' && <HomePage listings={listings} setPage={setPage} setFilter={setFilter} />}
       {page === 'auth' && <AuthPage onAuth={() => setPage('dashboard')} />}
-      {page === 'admin' && isAdmin && <div className="max-w-2xl mx-auto p-4"><AdminPanel user={user} allListings={listings} onUpdate={fetchListings} /></div>}
+      {page === 'admin' && <div className="max-w-2xl mx-auto p-4"><AdminPanel user={user} allListings={listings} onUpdate={fetchListings} /></div>}
       {page === 'dashboard' && user && <div className="max-w-2xl mx-auto p-4"><LandlordDashboard user={user} allListings={listings} onUpdate={fetchListings} /></div>}
+      {page === 'dashboard' && !user && <AuthPage onAuth={() => setPage('dashboard')} />}
 
       {page === 'search' && (
         <div className="max-w-2xl mx-auto p-4">
@@ -900,7 +956,6 @@ export default function App() {
               <span>💡</span>
               <p className="text-amber-700 text-sm"><strong>Listing fee:</strong> {form.type === 'airbnb' ? 'KES 500' : 'KES 300'} · M-Pesa · 30 days · Goes live after verification</p>
             </div>
-
             <div className="mb-4">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Property title</label>
               <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Spacious 2 Bedroom in Kisii Town" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
@@ -946,11 +1001,11 @@ export default function App() {
               </div>
             )}
             <div className="mb-5">
-              <label className="block text-gray-600 font-semibold text-sm mb-2">Photos <span className="text-gray-400 font-normal">(up to 5)</span></label>
+              <label className="block text-gray-600 font-semibold text-sm mb-2">Photos <span className="text-gray-400 font-normal">(up to 5 · JPG/PNG/WEBP · max 5MB each)</span></label>
               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
                 <span className="text-2xl mb-1">📸</span>
                 <span className="text-gray-400 text-xs">Tap to upload photos</span>
-                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+                <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleImageChange} className="hidden" />
               </label>
               {previews.length > 0 && (
                 <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
