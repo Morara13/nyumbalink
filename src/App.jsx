@@ -7,6 +7,25 @@ import 'leaflet/dist/leaflet.css'
 
 const auth = getAuth()
 const MPESA_NUMBER = "0724380481"
+const LISTING_DAYS = 30
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function isValidKenyanPhone(phone) {
+  const cleaned = phone.replace(/\s+/g, '')
+  return /^(07|01)\d{8}$/.test(cleaned)
+}
+
+function daysLeft(createdAt) {
+  if (!createdAt) return 0
+  const created = createdAt.toDate ? createdAt.toDate() : new Date(createdAt)
+  const diff = LISTING_DAYS - Math.floor((Date.now() - created.getTime()) / 86400000)
+  return Math.max(0, diff)
+}
+
+function isExpired(createdAt) {
+  return daysLeft(createdAt) === 0
+}
 
 async function uploadImage(file) {
   const formData = new FormData()
@@ -17,16 +36,25 @@ async function uploadImage(file) {
   return data.secure_url
 }
 
-async function getCoordinates(location) {
-  try {
-    const res = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(location + ', Kenya') + '&format=json&limit=1', {
-      headers: { 'Accept-Language': 'en' }
-    })
-    const data = await res.json()
-    if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
-  } catch (e) { console.error('Geocoding error:', e) }
+async function getCoordinates(address, location) {
+  // Try full address first, fall back to location/town
+  const queries = [
+    address + ', ' + location + ', Kenya',
+    location + ', Kenya'
+  ]
+  for (const q of queries) {
+    try {
+      const res = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&countrycodes=ke', {
+        headers: { 'Accept-Language': 'en' }
+      })
+      const data = await res.json()
+      if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    } catch (e) { console.error('Geocoding error:', e) }
+  }
   return { lat: -0.6831, lng: 37.0 }
 }
+
+// ── Payment Modal ─────────────────────────────────────────────────────────────
 
 function PaymentModal({ listing, onClose }) {
   const isAirbnb = listing.type === 'airbnb'
@@ -37,13 +65,13 @@ function PaymentModal({ listing, onClose }) {
   const [error, setError] = useState('')
 
   const triggerSTK = async () => {
-    if (!phone || phone.length < 10) { setError('Please enter a valid M-Pesa number'); return }
+    if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/mpesa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, amount: fee, reference: 'Kodi254 - ' + listing.title })
+        body: JSON.stringify({ phone: phone.replace(/\s+/g, ''), amount: fee, reference: 'Kodi254 - ' + listing.title })
       })
       const data = await res.json()
       if (data.success) { setStep(2) } else { setError(data.error || 'Payment failed.') }
@@ -70,7 +98,15 @@ function PaymentModal({ listing, onClose }) {
                 <p className="text-green-600 text-xs mt-1">{isAirbnb ? 'Full booking amount' : 'One-time viewing fee'}</p>
               </div>
               <label className="block text-gray-700 font-semibold mb-2 text-sm">Your M-Pesa Number</label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-4" placeholder="0712 345 678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
+              <input
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-1"
+                placeholder="0712 345 678"
+                value={phone}
+                onChange={e => { setPhone(e.target.value); setError('') }}
+                type="tel"
+                maxLength={12}
+              />
+              <p className="text-gray-400 text-xs mb-4">Must be a Safaricom number starting with 07 or 01</p>
               {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
               <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
                 {loading ? '⏳ Sending...' : `Pay KES ${fee.toLocaleString()} via M-Pesa 📱`}
@@ -107,6 +143,8 @@ function PaymentModal({ listing, onClose }) {
   )
 }
 
+// ── Landlord Payment Modal ────────────────────────────────────────────────────
+
 function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
   const fee = listingType === 'airbnb' ? 500 : 300
   const [step, setStep] = useState(1)
@@ -115,13 +153,13 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
   const [error, setError] = useState('')
 
   const triggerSTK = async () => {
-    if (!phone || phone.length < 10) { setError('Please enter a valid M-Pesa number'); return }
+    if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/mpesa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, amount: fee, reference: 'Kodi254 Listing Fee' })
+        body: JSON.stringify({ phone: phone.replace(/\s+/g, ''), amount: fee, reference: 'Kodi254 Listing Fee' })
       })
       const data = await res.json()
       if (data.success) { setStep(2) } else { setError(data.error || 'Payment failed.') }
@@ -148,7 +186,15 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
                 <p className="text-blue-600 text-xs mt-1">Your listing stays live for 30 days</p>
               </div>
               <label className="block text-gray-700 font-semibold mb-2 text-sm">Your M-Pesa Number</label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-4" placeholder="0712 345 678" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
+              <input
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-1"
+                placeholder="0712 345 678"
+                value={phone}
+                onChange={e => { setPhone(e.target.value); setError('') }}
+                type="tel"
+                maxLength={12}
+              />
+              <p className="text-gray-400 text-xs mb-4">Must be a Safaricom number starting with 07 or 01</p>
               {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
               <button onClick={triggerSTK} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
                 {loading ? '⏳ Sending...' : `Pay KES ${fee.toLocaleString()} via M-Pesa 📱`}
@@ -177,6 +223,8 @@ function LandlordPaymentModal({ listingType, onSuccess, onClose }) {
     </div>
   )
 }
+
+// ── Listing Card ──────────────────────────────────────────────────────────────
 
 function ListingCard({ listing }) {
   const [showPayment, setShowPayment] = useState(false)
@@ -246,9 +294,9 @@ function ListingCard({ listing }) {
         <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">{expanded ? '▲ collapse' : '▼ show map'}</button>
         {expanded && (
           <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
-            <MapContainer center={position} zoom={listing.lat ? 14 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+            <MapContainer center={position} zoom={listing.lat ? 15 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={position}><Popup><strong>{listing.title}</strong><br />📍 {listing.location}</Popup></Marker>
+              <Marker position={position}><Popup><strong>{listing.title}</strong><br />📍 {listing.address ? listing.address + ', ' : ''}{listing.location}</Popup></Marker>
             </MapContainer>
           </div>
         )}
@@ -256,6 +304,8 @@ function ListingCard({ listing }) {
     </div>
   )
 }
+
+// ── Landlord Dashboard ────────────────────────────────────────────────────────
 
 function LandlordDashboard({ user, allListings, onUpdate }) {
   const myListings = allListings.filter(l => l.landlordEmail === user.email)
@@ -282,8 +332,10 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
       {myListings.map(listing => {
         const dashboardImages = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
         const hasDashboardImages = dashboardImages.length > 0
+        const days = daysLeft(listing.createdAt)
+        const expired = days === 0
         return (
-          <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden w-full">
+          <div key={listing.id} className={`bg-white rounded-2xl shadow-sm mb-4 border overflow-hidden w-full ${expired ? 'border-red-200 opacity-60' : 'border-gray-100'}`}>
             {hasDashboardImages ? (
               <img src={dashboardImages[0]} alt="house" className="w-full h-44 object-cover" onError={(e) => { e.target.style.display = 'none' }} />
             ) : (
@@ -299,9 +351,18 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
                 </span>
               </div>
               <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
-              <p className="text-gray-700 font-bold text-sm mb-4">{listing.type === 'airbnb' ? 'KES ' + Number(listing.price).toLocaleString() + '/night' : 'KES ' + Number(listing.price).toLocaleString() + '/month'}</p>
+              <p className="text-gray-700 font-bold text-sm mb-2">{listing.type === 'airbnb' ? 'KES ' + Number(listing.price).toLocaleString() + '/night' : 'KES ' + Number(listing.price).toLocaleString() + '/month'}</p>
+              {expired ? (
+                <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-3">
+                  <p className="text-red-600 text-xs font-medium">⚠️ Listing expired — relist to go live again</p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3">
+                  <p className="text-gray-400 text-xs">⏳ {days} day{days !== 1 ? 's' : ''} remaining</p>
+                </div>
+              )}
               <div className="flex gap-2">
-                <button onClick={() => toggleStatus(listing)} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200'}>
+                <button onClick={() => toggleStatus(listing)} disabled={expired} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200 disabled:opacity-40' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200 disabled:opacity-40'}>
                   {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
                 </button>
                 <button onClick={() => deleteListing(listing)} className="px-4 bg-gray-50 text-gray-400 py-2 rounded-xl text-sm border border-gray-200">🗑</button>
@@ -313,6 +374,8 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
     </div>
   )
 }
+
+// ── Auth Page ─────────────────────────────────────────────────────────────────
 
 function AuthPage({ onAuth }) {
   const [mode, setMode] = useState('login')
@@ -352,6 +415,8 @@ function AuthPage({ onAuth }) {
   )
 }
 
+// ── Home Page ─────────────────────────────────────────────────────────────────
+
 function HomePage({ listings, setPage, setFilter }) {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   const reviews = [
@@ -360,6 +425,7 @@ function HomePage({ listings, setPage, setFilter }) {
     { name: "Brandon", location: "Kisii", emoji: "👏", rating: 5, text: "I listed my house on Kodi254 and within 3 days I already had a serious tenant contacting me. The platform is straightforward and the M-Pesa payment system makes everything smooth. Worth every shilling." },
     { name: "Mong'ina", location: "Kisii", emoji: "🎉", rating: 5, text: "Nilikuwa na nyumba yangu ikiwa wazi kwa miezi miwili. Baada ya kuweka kwenye Kodi254, nilipata mpangaji ndani ya wiki moja tu. Bei ya kuweka listing ni ya chini sana ukilinganisha na faida unayopata." },
   ]
+  const activeListings = listings.filter(l => !isExpired(l.createdAt))
 
   return (
     <div className="bg-gray-50">
@@ -380,7 +446,7 @@ function HomePage({ listings, setPage, setFilter }) {
           <button onClick={() => { setPage('search'); setFilter('airbnb') }} className="bg-orange-500 text-white px-7 py-3 rounded-2xl font-bold shadow-lg hover:bg-orange-600 transition-all">🏨 Short Stays</button>
         </div>
         <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
-          <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">{listings.length}+</p><p className="text-gray-600 text-xs font-medium mt-1">Active Listings</p></div>
+          <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">{activeListings.length}+</p><p className="text-gray-600 text-xs font-medium mt-1">Active Listings</p></div>
           <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">0%</p><p className="text-gray-600 text-xs font-medium mt-1">Agent Fees</p></div>
           <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">47</p><p className="text-gray-600 text-xs font-medium mt-1">Counties</p></div>
         </div>
@@ -500,11 +566,13 @@ function HomePage({ listings, setPage, setFilter }) {
   )
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [page, setPage] = useState('home')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
-  const [form, setForm] = useState({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
+  const [form, setForm] = useState({ title: '', location: '', address: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
   const [amenities, setAmenities] = useState([])
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -540,7 +608,9 @@ export default function App() {
 
   const toggleAmenity = (a) => setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
 
+  // Filter out expired listings from search
   const filtered = listings.filter(l => {
+    if (isExpired(l.createdAt)) return false
     const matchSearch = l.location?.toLowerCase().includes(search.toLowerCase()) || l.title?.toLowerCase().includes(search.toLowerCase())
     const matchFilter = filter === 'all' || (filter === 'rental' && l.type !== 'airbnb') || (filter === 'airbnb' && l.type === 'airbnb')
     return matchSearch && matchFilter
@@ -548,6 +618,7 @@ export default function App() {
 
   const handleSubmit = async () => {
     if (!form.title || !form.location || !form.price || !form.phone) { alert('Please fill all required fields!'); return }
+    if (!isValidKenyanPhone(form.phone)) { alert('Please enter a valid Kenyan WhatsApp number e.g. 0712 345 678'); return }
     setShowLandlordPayment(true)
   }
 
@@ -561,11 +632,12 @@ export default function App() {
         imageUrls.push(await uploadImage(images[i]))
       }
       setUploadProgress('Getting location...')
-      const coords = await getCoordinates(form.location || '')
+      const coords = await getCoordinates(form.address || '', form.location || '')
       setUploadProgress('Saving listing...')
       const newListing = {
         title: form.title || '',
         location: form.location || '',
+        address: form.address || '',
         price: parseInt(form.price) || 0,
         bedrooms: parseInt(form.bedrooms) || 1,
         phone: form.phone || '',
@@ -581,7 +653,7 @@ export default function App() {
       }
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings(prev => [{ id: docRef.id, ...newListing }, ...prev])
-      setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
+      setForm({ title: '', location: '', address: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
       setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
@@ -670,17 +742,40 @@ export default function App() {
               <span>💡</span>
               <p className="text-amber-700 text-sm"><strong>Listing fee:</strong> {form.type === 'airbnb' ? 'KES 500' : 'KES 300'} · Pay via M-Pesa · 30 days</p>
             </div>
-            {[
-              ['Property title', 'title', 'text', 'e.g. Spacious 2 Bedroom in Kisii Town'],
-              ['Location / Town', 'location', 'text', 'e.g. Kisii, Nairobi, Nakuru'],
-              [form.type === 'airbnb' ? 'Price per night (KES)' : 'Rent per month (KES)', 'price', 'number', 'e.g. 8000'],
-              ['Your WhatsApp number', 'phone', 'tel', 'e.g. 0712 345 678'],
-            ].map(([label, field, type, placeholder]) => (
-              <div key={field} className="mb-4">
-                <label className="block text-gray-600 font-semibold text-sm mb-2">{label}</label>
-                <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder={placeholder} type={type} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} />
-              </div>
-            ))}
+
+            {/* Property title */}
+            <div className="mb-4">
+              <label className="block text-gray-600 font-semibold text-sm mb-2">Property title</label>
+              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Spacious 2 Bedroom in Kisii Town" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+            </div>
+
+            {/* Town / Location */}
+            <div className="mb-4">
+              <label className="block text-gray-600 font-semibold text-sm mb-2">Town / Area</label>
+              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Kilimani, Nairobi" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+            </div>
+
+            {/* Street Address — NEW for map accuracy */}
+            <div className="mb-4">
+              <label className="block text-gray-600 font-semibold text-sm mb-2">Street Address <span className="text-gray-400 font-normal">(for accurate map pin)</span></label>
+              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Lumumba Drive, House No. 12" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+              <p className="text-gray-400 text-xs mt-1">The more specific, the more accurate your pin on the map</p>
+            </div>
+
+            {/* Price */}
+            <div className="mb-4">
+              <label className="block text-gray-600 font-semibold text-sm mb-2">{form.type === 'airbnb' ? 'Price per night (KES)' : 'Rent per month (KES)'}</label>
+              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. 8000" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
+            </div>
+
+            {/* WhatsApp */}
+            <div className="mb-4">
+              <label className="block text-gray-600 font-semibold text-sm mb-2">Your WhatsApp number</label>
+              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. 0712 345 678" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+              <p className="text-gray-400 text-xs mt-1">Must start with 07 or 01</p>
+            </div>
+
+            {/* Bedrooms */}
             <div className="mb-4">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Bedrooms</label>
               <select className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" value={form.bedrooms} onChange={e => setForm({ ...form, bedrooms: e.target.value })}>
@@ -690,10 +785,13 @@ export default function App() {
                 <option value="4">4+ Bedrooms</option>
               </select>
             </div>
+
+            {/* Description */}
             <div className="mb-4">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Description</label>
               <textarea className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 h-24 resize-none text-sm" placeholder="Describe the property — size, condition, nearby facilities, water availability..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
+
             {form.type === 'airbnb' && (
               <div className="mb-4">
                 <label className="block text-gray-600 font-semibold text-sm mb-2">Amenities</label>
@@ -704,6 +802,7 @@ export default function App() {
                 </div>
               </div>
             )}
+
             <div className="mb-5">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Photos <span className="text-gray-400 font-normal">(up to 5)</span></label>
               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -717,6 +816,7 @@ export default function App() {
                 </div>
               )}
             </div>
+
             {uploadProgress && <p className="text-blue-600 text-sm mb-3 text-center">{uploadProgress}</p>}
             <button onClick={handleSubmit} disabled={submitting} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-black text-base disabled:opacity-50 transition-all active:scale-95">
               {submitting ? '⏳ Please wait...' : `Continue to Payment · KES ${form.type === 'airbnb' ? '500' : '300'} →`}
