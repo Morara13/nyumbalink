@@ -6,27 +6,15 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const auth = getAuth()
-const CLOUD_NAME = "dg4dwedsi"
-const UPLOAD_PRESET = "kodi254_preset"
 const MPESA_NUMBER = "0724380481"
 
 async function uploadImage(file) {
-  try {
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("upload_preset", "kodi254_preset")
-    const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", {
-      method: "POST",
-      body: formData
-    })
-    const data = await res.json()
-    console.log("Cloudinary response:", data)
-    if (!res.ok) throw new Error('Cloudinary upload failed: ' + (data.error?.message || res.status))
-    return data.secure_url || null
-  } catch (e) {
-    console.error("Cloudinary upload error:", e)
-    return null
-  }
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("upload_preset", "kodi254_preset")
+  const res = await fetch("https://api.cloudinary.com/v1_1/dg4dwedsi/image/upload", { method: "POST", body: formData })
+  const data = await res.json()
+  return data.secure_url
 }
 
 async function getCoordinates(location) {
@@ -196,7 +184,6 @@ function ListingCard({ listing }) {
   const [imgIndex, setImgIndex] = useState(0)
   const isAirbnb = listing.type === 'airbnb'
   const position = listing.lat && listing.lng ? [listing.lat, listing.lng] : [-0.6831, 37.0]
-
   const images = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
   const hasImages = images.length > 0
 
@@ -206,37 +193,16 @@ function ListingCard({ listing }) {
 
       {hasImages ? (
         <div className="relative w-full h-52 bg-gray-100">
-          <img
-            src={images[imgIndex]}
-            alt={listing.title || "Property Image"}
-            className="w-full h-52 object-cover"
-            onError={(e) => { e.target.style.display = 'none' }}
-          />
+          <img src={images[imgIndex]} alt={listing.title || "Property"} className="w-full h-52 object-cover" onError={(e) => { e.target.style.display = 'none' }} />
           {images.length > 1 && (
             <>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === 0 ? images.length - 1 : prev - 1) }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 hover:bg-black/70"
-              >❮</button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === images.length - 1 ? 0 : prev + 1) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 hover:bg-black/70"
-              >❯</button>
-              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                {imgIndex + 1} / {images.length}
-              </div>
+              <button type="button" onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === 0 ? images.length - 1 : prev - 1) }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 hover:bg-black/70">❮</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); setImgIndex(prev => prev === images.length - 1 ? 0 : prev + 1) }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm z-10 hover:bg-black/70">❯</button>
+              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">{imgIndex + 1} / {images.length}</div>
             </>
           )}
-          {isAirbnb && (
-            <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>
-          )}
-          {listing.status === 'taken' && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span>
-            </div>
-          )}
+          {isAirbnb && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-medium">🏨 Short Stay</div>}
+          {listing.status === 'taken' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="bg-white text-gray-700 font-bold px-4 py-2 rounded-full">Not Available</span></div>}
         </div>
       ) : (
         <div className="w-full h-52 bg-gradient-to-br from-green-100 to-emerald-50 flex flex-col items-center justify-center">
@@ -253,29 +219,23 @@ function ListingCard({ listing }) {
             <p className="text-gray-400 text-xs">{isAirbnb ? 'per night' : 'per month'}</p>
           </div>
         </div>
-
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
           <span>📍 {listing.location}</span>
           <span className="text-gray-300">·</span>
           <span>🛏 {listing.bedrooms} bed{listing.bedrooms > 1 ? 's' : ''}</span>
         </div>
-
         {listing.amenities && listing.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {listing.amenities.slice(0, 4).map((a, i) => <span key={i} className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-lg">{a}</span>)}
             {listing.amenities.length > 4 && <span className="bg-gray-100 text-gray-400 text-xs px-2 py-1 rounded-lg">+{listing.amenities.length - 4} more</span>}
           </div>
         )}
-
         {listing.description && (
           <p className="text-gray-500 text-sm mb-3 leading-relaxed">
             {expanded ? listing.description : listing.description.substring(0, 90) + (listing.description.length > 90 ? '...' : '')}
-            {listing.description.length > 90 && (
-              <button onClick={() => setExpanded(!expanded)} className="text-green-600 font-medium ml-1">{expanded ? 'less' : 'more'}</button>
-            )}
+            {listing.description.length > 90 && <button onClick={() => setExpanded(!expanded)} className="text-green-600 font-medium ml-1">{expanded ? 'less' : 'more'}</button>}
           </p>
         )}
-
         {listing.status !== 'taken' ? (
           <button onClick={() => setShowPayment(true)} className={isAirbnb ? "w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm" : "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm"}>
             {isAirbnb ? '🏨 Book Now' : '🔍 Request Viewing · KES 250'}
@@ -283,18 +243,12 @@ function ListingCard({ listing }) {
         ) : (
           <div className="w-full bg-gray-100 text-gray-400 py-3 rounded-xl text-center text-sm font-medium">Not Available</div>
         )}
-
-        <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">
-          {expanded ? '▲ collapse' : '▼ show map'}
-        </button>
-
+        <button onClick={() => setExpanded(!expanded)} className="w-full mt-2 text-gray-300 text-xs py-1 hover:text-gray-400">{expanded ? '▲ collapse' : '▼ show map'}</button>
         {expanded && (
           <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px' }}>
             <MapContainer center={position} zoom={listing.lat ? 14 : 6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={position}>
-                <Popup><strong>{listing.title}</strong><br />📍 {listing.location}</Popup>
-              </Marker>
+              <Marker position={position}><Popup><strong>{listing.title}</strong><br />📍 {listing.location}</Popup></Marker>
             </MapContainer>
           </div>
         )}
@@ -331,14 +285,7 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
         return (
           <div key={listing.id} className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden w-full">
             {hasDashboardImages ? (
-              <div className="relative w-full h-44 bg-gray-100">
-                <img
-                  src={dashboardImages[0]}
-                  alt="house"
-                  className="w-full h-44 object-cover"
-                  onError={(e) => { e.target.style.display = 'none' }}
-                />
-              </div>
+              <img src={dashboardImages[0]} alt="house" className="w-full h-44 object-cover" onError={(e) => { e.target.style.display = 'none' }} />
             ) : (
               <div className="w-full h-44 bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center text-4xl">
                 {listing.type === 'airbnb' ? '🏨' : '🏠'}
@@ -433,18 +380,9 @@ function HomePage({ listings, setPage, setFilter }) {
           <button onClick={() => { setPage('search'); setFilter('airbnb') }} className="bg-orange-500 text-white px-7 py-3 rounded-2xl font-bold shadow-lg hover:bg-orange-600 transition-all">🏨 Short Stays</button>
         </div>
         <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
-          <div className="bg-white rounded-2xl p-4 shadow-md">
-            <p className="text-2xl font-black text-green-700">{listings.length}+</p>
-            <p className="text-gray-600 text-xs font-medium mt-1">Active Listings</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-md">
-            <p className="text-2xl font-black text-green-700">0%</p>
-            <p className="text-gray-600 text-xs font-medium mt-1">Agent Fees</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-md">
-            <p className="text-2xl font-black text-green-700">47</p>
-            <p className="text-gray-600 text-xs font-medium mt-1">Counties</p>
-          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">{listings.length}+</p><p className="text-gray-600 text-xs font-medium mt-1">Active Listings</p></div>
+          <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">0%</p><p className="text-gray-600 text-xs font-medium mt-1">Agent Fees</p></div>
+          <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">47</p><p className="text-gray-600 text-xs font-medium mt-1">Counties</p></div>
         </div>
       </div>
 
@@ -516,17 +454,11 @@ function HomePage({ listings, setPage, setFilter }) {
             <div className="space-y-3">
               <a href="https://wa.me/254724380481" target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-green-600 text-white px-5 py-4 rounded-2xl font-semibold hover:bg-green-700 transition-colors">
                 <span className="text-2xl">📱</span>
-                <div>
-                  <p className="font-bold text-sm">Chat on WhatsApp</p>
-                  <p className="text-green-200 text-xs">0724 380 481</p>
-                </div>
+                <div><p className="font-bold text-sm">Chat on WhatsApp</p><p className="text-green-200 text-xs">0724 380 481</p></div>
               </a>
               <a href="mailto:kodikenya254@gmail.com" className="flex items-center gap-3 bg-white text-gray-700 px-5 py-4 rounded-2xl font-semibold border border-gray-200 hover:bg-gray-50 transition-colors">
                 <span className="text-2xl">✉️</span>
-                <div>
-                  <p className="font-bold text-sm">Send an Email</p>
-                  <p className="text-gray-400 text-xs">kodikenya254@gmail.com</p>
-                </div>
+                <div><p className="font-bold text-sm">Send an Email</p><p className="text-gray-400 text-xs">kodikenya254@gmail.com</p></div>
               </a>
             </div>
           </div>
@@ -544,10 +476,7 @@ function HomePage({ listings, setPage, setFilter }) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">{r.name[0]}</div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">{r.name} {r.emoji}</p>
-                      <p className="text-gray-400 text-xs">📍 {r.location}</p>
-                    </div>
+                    <div><p className="font-bold text-gray-900 text-sm">{r.name} {r.emoji}</p><p className="text-gray-400 text-xs">📍 {r.location}</p></div>
                   </div>
                   <p className="text-yellow-400 text-sm">{'⭐'.repeat(r.rating)}</p>
                 </div>
@@ -581,7 +510,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [rawFiles, setRawFiles] = useState([])
+  const [images, setImages] = useState([])
   const [previews, setPreviews] = useState([])
   const [uploadProgress, setUploadProgress] = useState('')
   const [user, setUser] = useState(null)
@@ -605,7 +534,7 @@ export default function App() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
-    setRawFiles(files)
+    setImages(files)
     setPreviews(files.map(f => URL.createObjectURL(f)))
   }
 
@@ -627,39 +556,37 @@ export default function App() {
     setSubmitting(true)
     try {
       let imageUrls = []
-      const filesToUpload = [...rawFiles]
-      for (let i = 0; i < filesToUpload.length; i++) {
-        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + filesToUpload.length + '...')
-        const url = await uploadImage(filesToUpload[i])
-        if (url && typeof url === 'string') { imageUrls.push(url) }
+      for (let i = 0; i < images.length; i++) {
+        setUploadProgress('Uploading photo ' + (i + 1) + ' of ' + images.length + '...')
+        imageUrls.push(await uploadImage(images[i]))
       }
       setUploadProgress('Getting location...')
       const coords = await getCoordinates(form.location || '')
       setUploadProgress('Saving listing...')
       const newListing = {
-        title: String(form.title || '').trim(),
-        location: String(form.location || '').trim(),
-        price: Number(form.price) || 0,
-        bedrooms: Number(form.bedrooms) || 1,
-        phone: String(form.phone || '').trim(),
-        description: String(form.description || '').trim(),
-        type: String(form.type || 'rental'),
-        amenities: form.type === 'airbnb' ? [...(amenities || [])] : [],
+        title: form.title || '',
+        location: form.location || '',
+        price: parseInt(form.price) || 0,
+        bedrooms: parseInt(form.bedrooms) || 1,
+        phone: form.phone || '',
+        description: form.description || '',
+        type: form.type || 'rental',
+        amenities: form.type === 'airbnb' ? (amenities ?? []) : [],
         images: imageUrls,
         lat: Number(coords?.lat) || -0.6831,
         lng: Number(coords?.lng) || 37.0,
         createdAt: new Date(),
-        landlordEmail: user && user.email ? String(user.email) : "anonymous_landlord",
+        landlordEmail: user?.email || 'anonymous',
         status: 'available'
       }
       const docRef = await addDoc(collection(db, 'listings'), newListing)
       setListings(prev => [{ id: docRef.id, ...newListing }, ...prev])
       setForm({ title: '', location: '', price: '', bedrooms: '1', phone: '', description: '', type: 'rental' })
-      setAmenities([]); setRawFiles([]); setPreviews([]); setUploadProgress('')
+      setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
     } catch (e) {
-      alert('Error saving listing: ' + e.message)
+      alert('Error: ' + e.message)
       console.error(e)
     }
     setSubmitting(false)
@@ -721,9 +648,7 @@ export default function App() {
             <div>
               <p className="text-gray-400 text-xs mb-4">{filtered.length} propert{filtered.length !== 1 ? 'ies' : 'y'} found</p>
               {filtered.map(listing => <ListingCard key={listing.id} listing={listing} />)}
-              {filtered.length === 0 && (
-                <div className="text-center py-16"><div className="text-4xl mb-3">🔍</div><p className="text-gray-700 font-medium">No properties found</p><p className="text-gray-400 text-sm mt-1">Try a different town name</p></div>
-              )}
+              {filtered.length === 0 && <div className="text-center py-16"><div className="text-4xl mb-3">🔍</div><p className="text-gray-700 font-medium">No properties found</p><p className="text-gray-400 text-sm mt-1">Try a different town name</p></div>}
             </div>
           )}
         </div>
