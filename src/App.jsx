@@ -45,6 +45,10 @@ function validateImages(files) {
   return errors
 }
 
+function normalizeSearch(str) {
+  return String(str || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
+}
+
 async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
@@ -112,7 +116,6 @@ function PaymentModal({ listing, onClose }) {
             </div>
             <button onClick={onClose} className="bg-gray-100 rounded-full w-9 h-9 flex items-center justify-center text-gray-500 text-lg">✕</button>
           </div>
-
           {step === 1 && (
             <div>
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
@@ -130,7 +133,6 @@ function PaymentModal({ listing, onClose }) {
               <p className="text-center text-gray-400 text-xs mt-3">🔒 Secured by IntaSend · Prompt sent to your phone</p>
             </div>
           )}
-
           {step === 2 && (
             <div>
               <div className="text-center mb-5">
@@ -144,27 +146,16 @@ function PaymentModal({ listing, onClose }) {
                 <p className="text-amber-700 text-sm">Enter your M-Pesa confirmation code below, then send proof on WhatsApp. We verify before sending landlord contact.</p>
               </div>
               <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
-              <input
-                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase"
-                placeholder="e.g. QGH7X8Y9Z0"
-                value={mpesaCode}
-                onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }}
-                maxLength={12}
-              />
+              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }} maxLength={12} />
               <p className="text-gray-400 text-xs mb-4">You will find this code in the M-Pesa SMS after paying</p>
               {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
               {!codeSent ? (
-                <button onClick={handleSendProof} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">
-                  ✅ Confirm Payment Code
-                </button>
+                <button onClick={handleSendProof} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">✅ Confirm Payment Code</button>
               ) : (
-                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">
-                  📱 Send Proof on WhatsApp
-                </a>
+                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">📱 Send Proof on WhatsApp</a>
               )}
             </div>
           )}
-
           {step === 3 && (
             <div className="text-center py-4">
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">⏳</div>
@@ -226,7 +217,6 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
             </div>
             <button onClick={onClose} className="bg-gray-100 rounded-full w-9 h-9 flex items-center justify-center text-gray-500 text-lg">✕</button>
           </div>
-
           {step === 1 && (
             <div>
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
@@ -247,7 +237,6 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
               <p className="text-center text-gray-400 text-xs mt-3">🔒 Secured by IntaSend</p>
             </div>
           )}
-
           {step === 2 && (
             <div>
               <div className="text-center mb-5">
@@ -260,27 +249,16 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
                 <p className="text-amber-700 text-sm">Enter your M-Pesa code and send proof on WhatsApp. We approve your listing within 30 minutes.</p>
               </div>
               <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
-              <input
-                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase"
-                placeholder="e.g. QGH7X8Y9Z0"
-                value={mpesaCode}
-                onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }}
-                maxLength={12}
-              />
+              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }} maxLength={12} />
               <p className="text-gray-400 text-xs mb-4">Check your M-Pesa SMS for this code</p>
               {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
               {!codeSent ? (
-                <button onClick={handleConfirmCode} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">
-                  ✅ Confirm Payment Code
-                </button>
+                <button onClick={handleConfirmCode} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">✅ Confirm Payment Code</button>
               ) : (
-                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">
-                  📱 Send Proof on WhatsApp
-                </a>
+                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">📱 Send Proof on WhatsApp</a>
               )}
             </div>
           )}
-
           {step === 3 && (
             <div className="text-center py-4">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">✅</div>
@@ -307,7 +285,6 @@ function ListingCard({ listing }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden">
       {showPayment && <PaymentModal listing={listing} onClose={() => setShowPayment(false)} />}
-
       {images.length > 0 ? (
         <div className="relative w-full h-52 bg-gray-100">
           <img src={images[imgIndex]} alt={listing.title} className="w-full h-full object-cover" onError={e => e.target.style.display = 'none'} />
@@ -327,7 +304,6 @@ function ListingCard({ listing }) {
           <span className="text-gray-400 text-xs">No photos</span>
         </div>
       )}
-
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-gray-900 flex-1 pr-3">{listing.title}</h3>
@@ -376,7 +352,6 @@ function ListingCard({ listing }) {
 
 // ── Admin Panel ───────────────────────────────────────────────────────────────
 function AdminPanel({ user, allListings, onUpdate }) {
-  // Double check admin on component level
   if (!user || user.email !== ADMIN_EMAIL) {
     return (
       <div className="text-center py-20">
@@ -388,13 +363,16 @@ function AdminPanel({ user, allListings, onUpdate }) {
   }
 
   const pending = allListings.filter(l => l.status === 'pending')
-  const active = allListings.filter(l => l.status === 'available')
+  // Fix: filter out expired from admin active list
+  const active = allListings.filter(l => l.status === 'available' && !isExpired(l.createdAt))
+  const expired = allListings.filter(l => l.status === 'available' && isExpired(l.createdAt))
   const taken = allListings.filter(l => l.status === 'taken')
 
   const approve = async (listing) => {
     await updateDoc(doc(db, 'listings', listing.id), { status: 'available' })
     onUpdate()
   }
+
   const reject = async (listing) => {
     if (window.confirm('Reject and delete this listing?')) {
       await deleteDoc(doc(db, 'listings', listing.id))
@@ -408,7 +386,9 @@ function AdminPanel({ user, allListings, onUpdate }) {
         <h2 className="text-xl font-black text-gray-900">Admin Panel</h2>
         <p className="text-gray-400 text-sm">Manage all listings and payments</p>
       </div>
-      <div className="grid grid-cols-3 gap-3 mb-6">
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-2 mb-6">
         <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-3 text-center">
           <p className="text-2xl font-black text-yellow-600">{pending.length}</p>
           <p className="text-yellow-700 text-xs font-medium">Pending</p>
@@ -421,21 +401,27 @@ function AdminPanel({ user, allListings, onUpdate }) {
           <p className="text-2xl font-black text-red-600">{taken.length}</p>
           <p className="text-red-700 text-xs font-medium">Taken</p>
         </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 text-center">
+          <p className="text-2xl font-black text-gray-500">{expired.length}</p>
+          <p className="text-gray-500 text-xs font-medium">Expired</p>
+        </div>
       </div>
 
+      {/* Pending */}
       {pending.length > 0 ? (
         <div className="mb-6">
-          <h3 className="font-bold text-gray-700 mb-3 text-sm">⏳ Awaiting Approval</h3>
+          <h3 className="font-bold text-gray-700 mb-3 text-sm">⏳ Awaiting Approval ({pending.length})</h3>
           {pending.map(listing => (
             <div key={listing.id} className="bg-white rounded-2xl border border-yellow-200 p-4 mb-3">
               {Array.isArray(listing.images) && listing.images.length > 0 && (
                 <img src={listing.images[0]} alt="house" className="w-full h-32 object-cover rounded-xl mb-3" onError={e => e.target.style.display = 'none'} />
               )}
               <h4 className="font-bold text-gray-900 mb-1">{listing.title}</h4>
-              <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
+              <p className="text-gray-400 text-sm mb-1">📍 {listing.location}{listing.address ? ' · ' + listing.address : ''}</p>
               <p className="text-gray-500 text-sm mb-1">👤 {listing.landlordEmail}</p>
               <p className="text-gray-500 text-sm mb-1">📱 {listing.phone}</p>
-              <p className="text-gray-700 font-bold text-sm mb-3">KES {Number(listing.price).toLocaleString()}{listing.type === 'airbnb' ? '/night' : '/month'}</p>
+              <p className="text-gray-700 font-bold text-sm mb-1">KES {Number(listing.price).toLocaleString()}{listing.type === 'airbnb' ? '/night' : '/month'}</p>
+              {listing.description && <p className="text-gray-400 text-xs mb-3 leading-relaxed">{listing.description.substring(0, 150)}{listing.description.length > 150 ? '...' : ''}</p>}
               <div className="flex gap-2">
                 <button onClick={() => approve(listing)} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-bold">✅ Approve</button>
                 <button onClick={() => reject(listing)} className="flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200">❌ Reject</button>
@@ -450,19 +436,43 @@ function AdminPanel({ user, allListings, onUpdate }) {
         </div>
       )}
 
-      <h3 className="font-bold text-gray-700 mb-3 text-sm">✅ Active Listings ({active.length})</h3>
-      {active.map(listing => (
-        <div key={listing.id} className="bg-white rounded-2xl border border-gray-100 p-4 mb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h4 className="font-bold text-gray-900 text-sm">{listing.title}</h4>
-              <p className="text-gray-400 text-xs">📍 {listing.location} · {listing.landlordEmail}</p>
-              <p className="text-gray-400 text-xs">⏳ {daysLeft(listing.createdAt)} days left</p>
+      {/* Active */}
+      {active.length > 0 && (
+        <>
+          <h3 className="font-bold text-gray-700 mb-3 text-sm">✅ Active Listings ({active.length})</h3>
+          {active.map(listing => (
+            <div key={listing.id} className="bg-white rounded-2xl border border-gray-100 p-4 mb-3">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900 text-sm">{listing.title}</h4>
+                  <p className="text-gray-400 text-xs">📍 {listing.location} · {listing.landlordEmail}</p>
+                  <p className="text-gray-400 text-xs">⏳ {daysLeft(listing.createdAt)} days left · KES {Number(listing.price).toLocaleString()}</p>
+                </div>
+                <button onClick={() => reject(listing)} className="text-gray-300 text-sm ml-2 hover:text-red-400">🗑</button>
+              </div>
             </div>
-            <button onClick={() => reject(listing)} className="text-gray-300 text-sm ml-2">🗑</button>
-          </div>
-        </div>
-      ))}
+          ))}
+        </>
+      )}
+
+      {/* Expired */}
+      {expired.length > 0 && (
+        <>
+          <h3 className="font-bold text-gray-500 mb-3 text-sm mt-4">⌛ Expired Listings ({expired.length})</h3>
+          {expired.map(listing => (
+            <div key={listing.id} className="bg-gray-50 rounded-2xl border border-gray-200 p-4 mb-3 opacity-60">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-700 text-sm">{listing.title}</h4>
+                  <p className="text-gray-400 text-xs">📍 {listing.location} · {listing.landlordEmail}</p>
+                  <p className="text-red-400 text-xs font-medium">Expired</p>
+                </div>
+                <button onClick={() => reject(listing)} className="text-gray-300 text-sm ml-2 hover:text-red-400">🗑</button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   )
 }
@@ -470,13 +480,27 @@ function AdminPanel({ user, allListings, onUpdate }) {
 // ── Landlord Dashboard ────────────────────────────────────────────────────────
 function LandlordDashboard({ user, allListings, onUpdate }) {
   const myListings = allListings.filter(l => l.landlordEmail === user.email)
+  const waSupport = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254 support, I need help with my listing. My email: ${user.email}`
 
+  // Fix: ownership check before any Firestore write
   const toggleStatus = async (listing) => {
-    await updateDoc(doc(db, 'listings', listing.id), { status: listing.status === 'taken' ? 'available' : 'taken' })
+    if (listing.landlordEmail !== user.email) { alert('Unauthorized action.'); return }
+    const newStatus = listing.status === 'taken' ? 'available' : 'taken'
+    // Fix: confirmation before marking taken
+    if (newStatus === 'taken') {
+      if (!window.confirm('Mark this listing as Taken? Tenants will no longer see it as available.')) return
+    }
+    await updateDoc(doc(db, 'listings', listing.id), { status: newStatus })
     onUpdate()
   }
+
   const deleteListing = async (listing) => {
-    if (window.confirm('Delete this listing?')) { await deleteDoc(doc(db, 'listings', listing.id)); onUpdate() }
+    // Fix: ownership check before delete
+    if (listing.landlordEmail !== user.email) { alert('Unauthorized action.'); return }
+    if (window.confirm('Permanently delete this listing? This cannot be undone.')) {
+      await deleteDoc(doc(db, 'listings', listing.id))
+      onUpdate()
+    }
   }
 
   return (
@@ -485,6 +509,7 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
         <h2 className="text-xl font-black text-gray-900">My Listings</h2>
         <p className="text-gray-400 text-sm">{myListings.length} propert{myListings.length !== 1 ? 'ies' : 'y'} listed</p>
       </div>
+
       {myListings.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <div className="text-5xl mb-3">🏠</div>
@@ -492,6 +517,7 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
           <p className="text-gray-400 text-sm">Add your first property to start earning</p>
         </div>
       )}
+
       {myListings.map(listing => {
         const imgs = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
         const days = daysLeft(listing.createdAt)
@@ -520,14 +546,16 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
               </div>
               <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
               <p className="text-gray-700 font-bold text-sm mb-2">KES {Number(listing.price).toLocaleString()}{listing.type === 'airbnb' ? '/night' : '/month'}</p>
+
               {isPending && (
                 <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-2 mb-3">
                   <p className="text-yellow-700 text-xs font-medium">⏳ Awaiting payment verification — goes live within 30 min</p>
+                  <a href={waSupport} target="_blank" rel="noreferrer" className="text-green-600 text-xs font-medium mt-1 block">Need help? Chat with us on WhatsApp →</a>
                 </div>
               )}
               {expired && !isPending && (
                 <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-3">
-                  <p className="text-red-600 text-xs font-medium">⚠️ Listing expired — relist to go live again</p>
+                  <p className="text-red-600 text-xs font-medium">⚠️ Listing expired — delete and relist to go live again</p>
                 </div>
               )}
               {!expired && !isPending && (
@@ -535,16 +563,30 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
                   <p className="text-gray-400 text-xs">⏳ {days} day{days !== 1 ? 's' : ''} remaining</p>
                 </div>
               )}
+
               <div className="flex gap-2">
-                <button onClick={() => toggleStatus(listing)} disabled={expired || isPending} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200 disabled:opacity-40' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200 disabled:opacity-40'}>
+                <button
+                  onClick={() => toggleStatus(listing)}
+                  disabled={expired || isPending}
+                  className={listing.status === 'taken'
+                    ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200 disabled:opacity-40'
+                    : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200 disabled:opacity-40'
+                  }>
                   {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
                 </button>
-                <button onClick={() => deleteListing(listing)} className="px-4 bg-gray-50 text-gray-400 py-2 rounded-xl text-sm border border-gray-200">🗑</button>
+                <button onClick={() => deleteListing(listing)} className="px-4 bg-gray-50 text-gray-400 py-2 rounded-xl text-sm border border-gray-200 hover:bg-red-50 hover:text-red-400 transition-colors">🗑</button>
               </div>
             </div>
           </div>
         )
       })}
+
+      {/* Support button at bottom of dashboard */}
+      {myListings.length > 0 && (
+        <a href={waSupport} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full bg-green-50 border border-green-100 text-green-700 py-3 rounded-2xl text-sm font-medium mt-2">
+          💬 Need help? Chat with Kodi254 support
+        </a>
+      )}
     </div>
   )
 }
@@ -811,12 +853,19 @@ export default function App() {
 
   const toggleAmenity = (a) => setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
 
+  // Fix: improved search using normalizeSearch for better partial matching
   const filtered = listings.filter(l => {
     if (l.status === 'pending') return false
     if (isExpired(l.createdAt)) return false
-    const matchSearch = l.location?.toLowerCase().includes(search.toLowerCase()) || l.title?.toLowerCase().includes(search.toLowerCase())
+    const q = normalizeSearch(search)
+    if (q) {
+      const inLocation = normalizeSearch(l.location).includes(q)
+      const inTitle = normalizeSearch(l.title).includes(q)
+      const inAddress = normalizeSearch(l.address || '').includes(q)
+      if (!inLocation && !inTitle && !inAddress) return false
+    }
     const matchFilter = filter === 'all' || (filter === 'rental' && l.type !== 'airbnb') || (filter === 'airbnb' && l.type === 'airbnb')
-    return matchSearch && matchFilter
+    return matchFilter
   })
 
   const handleSubmit = async () => {
@@ -868,7 +917,6 @@ export default function App() {
     setSubmitting(false)
   }
 
-  // Safe page navigation — redirects unauthorized users
   const navigateTo = (target) => {
     if (target === 'admin' && !isAdmin) return
     if ((target === 'dashboard' || target === 'list') && !user) { setPage('auth'); return }
@@ -921,7 +969,7 @@ export default function App() {
           <h2 className="text-xl font-black text-gray-900 mb-4 mt-2">Find a Property</h2>
           <div className="relative mb-4">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-            <input className="w-full border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-green-300 bg-white text-sm" placeholder="Search by town or name..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input className="w-full border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-green-300 bg-white text-sm" placeholder="Search by town, area or name..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="flex gap-2 mb-5">
             {[['all', 'All'], ['rental', '🏠 Rentals'], ['airbnb', '🏨 Short Stay']].map(([val, label]) => (
@@ -934,7 +982,7 @@ export default function App() {
             <div>
               <p className="text-gray-400 text-xs mb-4">{filtered.length} propert{filtered.length !== 1 ? 'ies' : 'y'} found</p>
               {filtered.map(listing => <ListingCard key={listing.id} listing={listing} />)}
-              {filtered.length === 0 && <div className="text-center py-16"><div className="text-4xl mb-3">🔍</div><p className="text-gray-700 font-medium">No properties found</p><p className="text-gray-400 text-sm mt-1">Try a different town name</p></div>}
+              {filtered.length === 0 && <div className="text-center py-16"><div className="text-4xl mb-3">🔍</div><p className="text-gray-700 font-medium">No properties found</p><p className="text-gray-400 text-sm mt-1">Try a different town or area name</p></div>}
             </div>
           )}
         </div>
