@@ -121,6 +121,7 @@ function NotFoundPage({ onGoHome }) {
           🏠 Back to Home
         </button>
         
+          <a 
           href="https://wa.me/254724380481"
           target="_blank"
           rel="noreferrer"
