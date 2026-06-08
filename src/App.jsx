@@ -45,6 +45,22 @@ function normalizeSearch(str) {
   return String(str || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
 }
 
+// ── Dynamic page title for SEO ────────────────────────────────────────────────
+function usePageTitle(page) {
+  useEffect(() => {
+    const titles = {
+      home: 'Kodi254 — Find Houses & Rentals in Kenya',
+      search: 'Search Properties — Kodi254',
+      list: 'List Your Property — Kodi254',
+      dashboard: 'My Listings — Kodi254',
+      admin: 'Admin Panel — Kodi254',
+      auth: 'Landlord Login — Kodi254',
+      terms: 'Terms & Conditions — Kodi254',
+    }
+    document.title = titles[page] || 'Kodi254 — Find Houses & Rentals in Kenya'
+  }, [page])
+}
+
 async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
@@ -89,6 +105,34 @@ function ListingSkeleton() {
   )
 }
 
+// ── 404 Not Found Page ────────────────────────────────────────────────────────
+function NotFoundPage({ onGoHome }) {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="text-center max-w-sm">
+        <div className="text-8xl mb-6">🏚️</div>
+        <h1 className="text-3xl font-black text-gray-900 mb-3">Page Not Found</h1>
+        <p className="text-gray-500 mb-2">Looks like this page packed up and moved.</p>
+        <p className="text-gray-400 text-sm mb-8">The page you are looking for does not exist or has been moved.</p>
+        <button
+          onClick={onGoHome}
+          className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all active:scale-95 w-full"
+        >
+          🏠 Back to Home
+        </button>
+        
+          href="https://wa.me/254724380481"
+          target="_blank"
+          rel="noreferrer"
+          className="block mt-3 text-green-600 text-sm underline"
+        >
+          Need help? Chat with us on WhatsApp
+        </a>
+      </div>
+    </div>
+  )
+}
+
 // ── Terms Page ────────────────────────────────────────────────────────────────
 function TermsPage({ onClose }) {
   return (
@@ -101,13 +145,11 @@ function TermsPage({ onClose }) {
             <p className="text-gray-400 text-xs">Last updated: June 2026</p>
           </div>
         </div>
-
         <div className="space-y-6 text-gray-600 text-sm leading-relaxed">
           <div>
             <h2 className="font-bold text-gray-900 mb-2">1. About Kodi254</h2>
             <p>Kodi254 is a property listing platform that connects tenants with landlords across Kenya. We are not a real estate agent. We do not own, manage, or inspect any of the properties listed on our platform.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">2. For Tenants — Viewing Fee</h2>
             <p className="mb-2">To receive a landlord's contact information, tenants pay a one-time viewing fee of <strong>KES 250</strong> via M-Pesa. This fee is:</p>
@@ -118,7 +160,6 @@ function TermsPage({ onClose }) {
             </ul>
             <p className="mt-2">After payment is verified, you will receive the landlord's WhatsApp number within <strong>30 minutes</strong>. If we are unable to deliver the contact within 2 hours, you may request a refund by contacting us on WhatsApp.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">3. For Landlords — Listing Fee</h2>
             <p className="mb-2">To list a property, landlords pay a listing fee via M-Pesa:</p>
@@ -129,17 +170,14 @@ function TermsPage({ onClose }) {
             <p className="mt-2">Listings stay live for <strong>30 days</strong> from the date of approval. The listing fee is non-refundable once your listing has been approved and published.</p>
             <p className="mt-2">Kodi254 reserves the right to reject any listing that contains false information, inappropriate content, or does not meet our standards.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">4. Payment Verification</h2>
             <p>All payments are processed via M-Pesa through IntaSend. After paying, you are required to send your M-Pesa confirmation code to our WhatsApp number <strong>{MPESA_NUMBER}</strong> as proof of payment. We manually verify every payment before delivering services.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">5. Accuracy of Listings</h2>
             <p>Landlords are solely responsible for the accuracy of their listings. Kodi254 does not verify property details, ownership, or availability. We strongly advise tenants to physically visit and inspect any property before making any payments to a landlord.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">6. Prohibited Content</h2>
             <p>The following are strictly prohibited on Kodi254:</p>
@@ -151,12 +189,10 @@ function TermsPage({ onClose }) {
             </ul>
             <p className="mt-2">Violations will result in immediate removal of the listing without refund and may be reported to relevant authorities.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">7. Limitation of Liability</h2>
             <p>Kodi254 is a platform only. We are not liable for any disputes, losses, or damages arising from transactions between landlords and tenants. Use this platform at your own risk and exercise due diligence before making any financial commitments.</p>
           </div>
-
           <div>
             <h2 className="font-bold text-gray-900 mb-2">8. Contact Us</h2>
             <p>For any questions, disputes, or refund requests, contact us at:</p>
@@ -164,7 +200,6 @@ function TermsPage({ onClose }) {
             <p><strong>Email:</strong> kodikenya254@gmail.com</p>
           </div>
         </div>
-
         <button onClick={onClose} className="w-full mt-8 bg-green-600 text-white py-4 rounded-2xl font-bold">Close</button>
       </div>
     </div>
@@ -507,7 +542,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
           <p className="text-gray-500 text-xs font-medium">Expired</p>
         </div>
       </div>
-
       {pending.length > 0 ? (
         <div className="mb-6">
           <h3 className="font-bold text-gray-700 mb-3 text-sm">⏳ Awaiting Approval ({pending.length})</h3>
@@ -535,7 +569,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
           <p className="text-gray-500 text-sm">No pending listings!</p>
         </div>
       )}
-
       {active.length > 0 && (
         <>
           <h3 className="font-bold text-gray-700 mb-3 text-sm">✅ Active Listings ({active.length})</h3>
@@ -553,7 +586,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
           ))}
         </>
       )}
-
       {expired.length > 0 && (
         <>
           <h3 className="font-bold text-gray-500 mb-3 text-sm mt-4">⌛ Expired Listings ({expired.length})</h3>
@@ -899,11 +931,13 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false)
   const [showLandlordPayment, setShowLandlordPayment] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
-  // Fix: mobile menu
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const amenityOptions = ['WiFi', 'Parking', 'Kitchen', 'TV', 'AC', 'Washer', 'Pool', 'Gym', 'Security', 'Water', 'Generator']
   const isAdmin = user?.email === ADMIN_EMAIL
+
+  // Dynamic page titles for SEO
+  usePageTitle(page)
 
   useEffect(() => { onAuthStateChanged(auth, (u) => { setUser(u); setAuthChecked(true) }) }, [])
 
@@ -997,6 +1031,8 @@ export default function App() {
     setMobileMenuOpen(false)
   }
 
+  const KNOWN_PAGES = ['home', 'search', 'list', 'dashboard', 'admin', 'auth']
+
   if (!authChecked) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center"><div className="text-5xl mb-3">🏠</div><p className="text-gray-400 text-sm">Loading Kodi254...</p></div>
@@ -1008,12 +1044,11 @@ export default function App() {
       {showTerms && <TermsPage onClose={() => setShowTerms(false)} />}
       {showLandlordPayment && <LandlordPaymentModal listingType={form.type} formData={form} onSuccess={submitListing} onClose={() => setShowLandlordPayment(false)} />}
 
-      {/* Fix: responsive navbar */}
+      {/* Navbar */}
       <div className="bg-green-700 text-white px-4 py-3 shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button onClick={() => setPage('home')} className="font-black text-xl">Kodi<span className="text-green-300">254</span></button>
-
-          {/* Desktop nav */}
+          {/* Desktop */}
           <div className="hidden sm:flex gap-1 items-center">
             <button onClick={() => navigateTo('search')} className={page === 'search' ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600'}>Search</button>
             {user ? (
@@ -1027,8 +1062,7 @@ export default function App() {
               <button onClick={() => setPage('auth')} className="px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700 ml-2">Landlord Login</button>
             )}
           </div>
-
-          {/* Mobile nav — hamburger */}
+          {/* Mobile */}
           <div className="flex sm:hidden items-center gap-2">
             <button onClick={() => navigateTo('search')} className="px-3 py-2 rounded-xl text-sm font-bold bg-white text-green-700">Search</button>
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="w-9 h-9 bg-green-600 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-green-500">
@@ -1038,15 +1072,11 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
           <div className="sm:hidden mt-2 bg-green-800 rounded-2xl p-3 space-y-1">
             {user ? (
               <>
-                {isAdmin && (
-                  <button onClick={() => navigateTo('admin')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">⚙️ Admin Panel</button>
-                )}
+                {isAdmin && <button onClick={() => navigateTo('admin')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">⚙️ Admin Panel</button>}
                 <button onClick={() => navigateTo('dashboard')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">🏠 My Listings</button>
                 <button onClick={() => navigateTo('list')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">+ Add Listing</button>
                 <div className="border-t border-green-700 pt-1 mt-1">
@@ -1059,6 +1089,9 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* 404 — unknown pages */}
+      {!KNOWN_PAGES.includes(page) && <NotFoundPage onGoHome={() => setPage('home')} />}
 
       {page === 'home' && <HomePage listings={listings} setPage={setPage} setFilter={setFilter} onShowTerms={() => setShowTerms(true)} />}
       {page === 'auth' && <AuthPage onAuth={() => setPage('dashboard')} />}
@@ -1078,8 +1111,6 @@ export default function App() {
               <button key={val} onClick={() => setFilter(val)} className={filter === val ? (val === 'airbnb' ? 'px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold' : 'px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-bold') : 'px-4 py-2 rounded-xl bg-white text-gray-500 text-sm border border-gray-200'}>{label}</button>
             ))}
           </div>
-
-          {/* Fix: skeleton loader instead of blank screen */}
           {loading ? (
             <div>
               <div className="h-4 bg-gray-200 rounded w-24 mb-4 animate-pulse" />
@@ -1102,7 +1133,6 @@ export default function App() {
       )}
 
       {page === 'list' && !user && <AuthPage onAuth={() => setPage('list')} />}
-
       {page === 'list' && user && (
         <div className="max-w-2xl mx-auto p-4 pb-10">
           <h2 className="text-xl font-black text-gray-900 mb-1 mt-2">List Your Property</h2>
