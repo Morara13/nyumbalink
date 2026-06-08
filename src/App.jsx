@@ -35,12 +35,8 @@ function isExpired(createdAt) {
 function validateImages(files) {
   const errors = []
   for (const file of files) {
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      errors.push(`${file.name} is not a valid image type. Use JPG, PNG or WEBP.`)
-    }
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      errors.push(`${file.name} is too large. Max size is ${MAX_FILE_SIZE_MB}MB.`)
-    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) errors.push(`${file.name} is not a valid image type. Use JPG, PNG or WEBP.`)
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) errors.push(`${file.name} is too large. Max size is ${MAX_FILE_SIZE_MB}MB.`)
   }
   return errors
 }
@@ -71,6 +67,110 @@ async function getCoordinates(address, location) {
   return { lat: -0.6831, lng: 37.0 }
 }
 
+// ── Skeleton Loader ───────────────────────────────────────────────────────────
+function ListingSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 overflow-hidden animate-pulse">
+      <div className="w-full h-52 bg-gray-200" />
+      <div className="p-4">
+        <div className="flex justify-between mb-3">
+          <div className="h-5 bg-gray-200 rounded-lg w-2/3" />
+          <div className="h-5 bg-gray-200 rounded-lg w-1/5" />
+        </div>
+        <div className="h-4 bg-gray-200 rounded-lg w-1/2 mb-3" />
+        <div className="flex gap-2 mb-3">
+          <div className="h-6 bg-gray-200 rounded-lg w-12" />
+          <div className="h-6 bg-gray-200 rounded-lg w-12" />
+          <div className="h-6 bg-gray-200 rounded-lg w-12" />
+        </div>
+        <div className="h-11 bg-gray-200 rounded-xl w-full" />
+      </div>
+    </div>
+  )
+}
+
+// ── Terms Page ────────────────────────────────────────────────────────────────
+function TermsPage({ onClose }) {
+  return (
+    <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+      <div className="max-w-2xl mx-auto p-6 pb-16">
+        <div className="flex items-center gap-3 mb-8 sticky top-0 bg-white py-4 border-b border-gray-100">
+          <button onClick={onClose} className="bg-gray-100 rounded-full w-9 h-9 flex items-center justify-center text-gray-500">✕</button>
+          <div>
+            <h1 className="text-xl font-black text-gray-900">Terms & Conditions</h1>
+            <p className="text-gray-400 text-xs">Last updated: June 2026</p>
+          </div>
+        </div>
+
+        <div className="space-y-6 text-gray-600 text-sm leading-relaxed">
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">1. About Kodi254</h2>
+            <p>Kodi254 is a property listing platform that connects tenants with landlords across Kenya. We are not a real estate agent. We do not own, manage, or inspect any of the properties listed on our platform.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">2. For Tenants — Viewing Fee</h2>
+            <p className="mb-2">To receive a landlord's contact information, tenants pay a one-time viewing fee of <strong>KES 250</strong> via M-Pesa. This fee is:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Non-refundable</strong> once the landlord's contact has been sent to you</li>
+              <li>Used to verify serious interest and cover our operational costs</li>
+              <li>Not a deposit or booking fee for the property itself</li>
+            </ul>
+            <p className="mt-2">After payment is verified, you will receive the landlord's WhatsApp number within <strong>30 minutes</strong>. If we are unable to deliver the contact within 2 hours, you may request a refund by contacting us on WhatsApp.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">3. For Landlords — Listing Fee</h2>
+            <p className="mb-2">To list a property, landlords pay a listing fee via M-Pesa:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>KES 300</strong> for long-stay rentals</li>
+              <li><strong>KES 500</strong> for short-stay / Airbnb-style listings</li>
+            </ul>
+            <p className="mt-2">Listings stay live for <strong>30 days</strong> from the date of approval. The listing fee is non-refundable once your listing has been approved and published.</p>
+            <p className="mt-2">Kodi254 reserves the right to reject any listing that contains false information, inappropriate content, or does not meet our standards.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">4. Payment Verification</h2>
+            <p>All payments are processed via M-Pesa through IntaSend. After paying, you are required to send your M-Pesa confirmation code to our WhatsApp number <strong>{MPESA_NUMBER}</strong> as proof of payment. We manually verify every payment before delivering services.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">5. Accuracy of Listings</h2>
+            <p>Landlords are solely responsible for the accuracy of their listings. Kodi254 does not verify property details, ownership, or availability. We strongly advise tenants to physically visit and inspect any property before making any payments to a landlord.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">6. Prohibited Content</h2>
+            <p>The following are strictly prohibited on Kodi254:</p>
+            <ul className="list-disc pl-5 space-y-1 mt-2">
+              <li>Fake or duplicate listings</li>
+              <li>Properties you do not own or have authority to list</li>
+              <li>Misleading photos or descriptions</li>
+              <li>Listings intended to defraud tenants</li>
+            </ul>
+            <p className="mt-2">Violations will result in immediate removal of the listing without refund and may be reported to relevant authorities.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">7. Limitation of Liability</h2>
+            <p>Kodi254 is a platform only. We are not liable for any disputes, losses, or damages arising from transactions between landlords and tenants. Use this platform at your own risk and exercise due diligence before making any financial commitments.</p>
+          </div>
+
+          <div>
+            <h2 className="font-bold text-gray-900 mb-2">8. Contact Us</h2>
+            <p>For any questions, disputes, or refund requests, contact us at:</p>
+            <p className="mt-2"><strong>WhatsApp:</strong> {MPESA_NUMBER}</p>
+            <p><strong>Email:</strong> kodikenya254@gmail.com</p>
+          </div>
+        </div>
+
+        <button onClick={onClose} className="w-full mt-8 bg-green-600 text-white py-4 rounded-2xl font-bold">Close</button>
+      </div>
+    </div>
+  )
+}
+
 // ── Payment Modal ─────────────────────────────────────────────────────────────
 function PaymentModal({ listing, onClose }) {
   const isAirbnb = listing.type === 'airbnb'
@@ -81,6 +181,7 @@ function PaymentModal({ listing, onClose }) {
   const [error, setError] = useState('')
   const [mpesaCode, setMpesaCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
 
   const triggerSTK = async () => {
     if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
@@ -101,75 +202,80 @@ function PaymentModal({ listing, onClose }) {
 
   const handleSendProof = () => {
     if (!mpesaCode || mpesaCode.length < 6) { setError('Please enter your M-Pesa confirmation code before sending'); return }
-    setCodeSent(true)
-    setError('')
+    setCodeSent(true); setError('')
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-5">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">{isAirbnb ? '🏨 Book Your Stay' : '🏠 Request Viewing'}</h3>
-              <p className="text-gray-500 text-sm mt-1">{listing.title} · {listing.location}</p>
+    <>
+      {showTerms && <TermsPage onClose={() => setShowTerms(false)} />}
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{isAirbnb ? '🏨 Book Your Stay' : '🏠 Request Viewing'}</h3>
+                <p className="text-gray-500 text-sm mt-1">{listing.title} · {listing.location}</p>
+              </div>
+              <button onClick={onClose} className="bg-gray-100 rounded-full w-9 h-9 flex items-center justify-center text-gray-500 text-lg">✕</button>
             </div>
-            <button onClick={onClose} className="bg-gray-100 rounded-full w-9 h-9 flex items-center justify-center text-gray-500 text-lg">✕</button>
+            {step === 1 && (
+              <div>
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
+                  <p className="text-gray-500 text-sm mb-1">Amount to pay</p>
+                  <p className="text-3xl font-black text-green-700">KES {fee.toLocaleString()}</p>
+                  <p className="text-green-600 text-xs mt-1">{isAirbnb ? 'Full booking amount' : 'One-time viewing fee — non-refundable'}</p>
+                </div>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">Your M-Pesa Number</label>
+                <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-1" placeholder="0712 345 678" value={phone} onChange={e => { setPhone(e.target.value); setError('') }} type="tel" maxLength={12} />
+                <p className="text-gray-400 text-xs mb-4">Safaricom number starting with 07 or 01</p>
+                {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
+                <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
+                  {loading ? '⏳ Sending prompt...' : `Pay KES ${fee.toLocaleString()} via M-Pesa 📱`}
+                </button>
+                <p className="text-center text-gray-400 text-xs mt-3">🔒 Secured by IntaSend · Prompt sent to your phone</p>
+                <p className="text-center text-xs mt-2">
+                  <button onClick={() => setShowTerms(true)} className="text-green-600 underline">View Terms & Conditions</button>
+                </p>
+              </div>
+            )}
+            {step === 2 && (
+              <div>
+                <div className="text-center mb-5">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">📲</div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Check your phone!</h3>
+                  <p className="text-gray-500 text-sm">M-Pesa prompt sent to <strong>{phone}</strong></p>
+                  <p className="text-gray-500 text-sm">Enter your PIN to complete payment.</p>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
+                  <p className="text-amber-800 font-semibold text-sm mb-1">⚠️ Required — don't skip</p>
+                  <p className="text-amber-700 text-sm">Enter your M-Pesa confirmation code below, then send proof on WhatsApp.</p>
+                </div>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
+                <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }} maxLength={12} />
+                <p className="text-gray-400 text-xs mb-4">You will find this code in the M-Pesa SMS after paying</p>
+                {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
+                {!codeSent ? (
+                  <button onClick={handleSendProof} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">✅ Confirm Payment Code</button>
+                ) : (
+                  <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">📱 Send Proof on WhatsApp</a>
+                )}
+              </div>
+            )}
+            {step === 3 && (
+              <div className="text-center py-4">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">⏳</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">You are all set!</h3>
+                <p className="text-gray-500 mb-4">We are verifying your payment. Landlord contact will be sent to your WhatsApp within <strong>30 minutes</strong>.</p>
+                <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-5">
+                  <p className="text-green-700 text-sm">Need help? WhatsApp <strong>{MPESA_NUMBER}</strong></p>
+                </div>
+                <button onClick={onClose} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg">Done 👍</button>
+              </div>
+            )}
           </div>
-          {step === 1 && (
-            <div>
-              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
-                <p className="text-gray-500 text-sm mb-1">Amount to pay</p>
-                <p className="text-3xl font-black text-green-700">KES {fee.toLocaleString()}</p>
-                <p className="text-green-600 text-xs mt-1">{isAirbnb ? 'Full booking amount' : 'One-time viewing fee — non-refundable'}</p>
-              </div>
-              <label className="block text-gray-700 font-semibold mb-2 text-sm">Your M-Pesa Number</label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:border-green-400 mb-1" placeholder="0712 345 678" value={phone} onChange={e => { setPhone(e.target.value); setError('') }} type="tel" maxLength={12} />
-              <p className="text-gray-400 text-xs mb-4">Safaricom number starting with 07 or 01</p>
-              {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
-              <button onClick={triggerSTK} disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
-                {loading ? '⏳ Sending prompt...' : `Pay KES ${fee.toLocaleString()} via M-Pesa 📱`}
-              </button>
-              <p className="text-center text-gray-400 text-xs mt-3">🔒 Secured by IntaSend · Prompt sent to your phone</p>
-            </div>
-          )}
-          {step === 2 && (
-            <div>
-              <div className="text-center mb-5">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">📲</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Check your phone!</h3>
-                <p className="text-gray-500 text-sm">M-Pesa prompt sent to <strong>{phone}</strong></p>
-                <p className="text-gray-500 text-sm">Enter your PIN to complete payment.</p>
-              </div>
-              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
-                <p className="text-amber-800 font-semibold text-sm mb-1">⚠️ Required — don't skip</p>
-                <p className="text-amber-700 text-sm">Enter your M-Pesa confirmation code below, then send proof on WhatsApp. We verify before sending landlord contact.</p>
-              </div>
-              <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }} maxLength={12} />
-              <p className="text-gray-400 text-xs mb-4">You will find this code in the M-Pesa SMS after paying</p>
-              {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
-              {!codeSent ? (
-                <button onClick={handleSendProof} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">✅ Confirm Payment Code</button>
-              ) : (
-                <a href={waLink} target="_blank" rel="noreferrer" onClick={() => setStep(3)} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg block text-center mb-3">📱 Send Proof on WhatsApp</a>
-              )}
-            </div>
-          )}
-          {step === 3 && (
-            <div className="text-center py-4">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">⏳</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">You are all set!</h3>
-              <p className="text-gray-500 mb-4">We are verifying your payment. Landlord contact will be sent to your WhatsApp within <strong>30 minutes</strong>.</p>
-              <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-5">
-                <p className="text-green-700 text-sm">Need help? WhatsApp <strong>{MPESA_NUMBER}</strong></p>
-              </div>
-              <button onClick={onClose} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg">Done 👍</button>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -202,8 +308,7 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
 
   const handleConfirmCode = () => {
     if (!mpesaCode || mpesaCode.length < 6) { setError('Please enter your M-Pesa confirmation code'); return }
-    setCodeSent(true)
-    setError('')
+    setCodeSent(true); setError('')
   }
 
   return (
@@ -363,7 +468,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
   }
 
   const pending = allListings.filter(l => l.status === 'pending')
-  // Fix: filter out expired from admin active list
   const active = allListings.filter(l => l.status === 'available' && !isExpired(l.createdAt))
   const expired = allListings.filter(l => l.status === 'available' && isExpired(l.createdAt))
   const taken = allListings.filter(l => l.status === 'taken')
@@ -372,7 +476,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
     await updateDoc(doc(db, 'listings', listing.id), { status: 'available' })
     onUpdate()
   }
-
   const reject = async (listing) => {
     if (window.confirm('Reject and delete this listing?')) {
       await deleteDoc(doc(db, 'listings', listing.id))
@@ -386,8 +489,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
         <h2 className="text-xl font-black text-gray-900">Admin Panel</h2>
         <p className="text-gray-400 text-sm">Manage all listings and payments</p>
       </div>
-
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-6">
         <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-3 text-center">
           <p className="text-2xl font-black text-yellow-600">{pending.length}</p>
@@ -407,7 +508,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
         </div>
       </div>
 
-      {/* Pending */}
       {pending.length > 0 ? (
         <div className="mb-6">
           <h3 className="font-bold text-gray-700 mb-3 text-sm">⏳ Awaiting Approval ({pending.length})</h3>
@@ -436,7 +536,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
         </div>
       )}
 
-      {/* Active */}
       {active.length > 0 && (
         <>
           <h3 className="font-bold text-gray-700 mb-3 text-sm">✅ Active Listings ({active.length})</h3>
@@ -455,7 +554,6 @@ function AdminPanel({ user, allListings, onUpdate }) {
         </>
       )}
 
-      {/* Expired */}
       {expired.length > 0 && (
         <>
           <h3 className="font-bold text-gray-500 mb-3 text-sm mt-4">⌛ Expired Listings ({expired.length})</h3>
@@ -482,11 +580,9 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
   const myListings = allListings.filter(l => l.landlordEmail === user.email)
   const waSupport = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254 support, I need help with my listing. My email: ${user.email}`
 
-  // Fix: ownership check before any Firestore write
   const toggleStatus = async (listing) => {
     if (listing.landlordEmail !== user.email) { alert('Unauthorized action.'); return }
     const newStatus = listing.status === 'taken' ? 'available' : 'taken'
-    // Fix: confirmation before marking taken
     if (newStatus === 'taken') {
       if (!window.confirm('Mark this listing as Taken? Tenants will no longer see it as available.')) return
     }
@@ -495,7 +591,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
   }
 
   const deleteListing = async (listing) => {
-    // Fix: ownership check before delete
     if (listing.landlordEmail !== user.email) { alert('Unauthorized action.'); return }
     if (window.confirm('Permanently delete this listing? This cannot be undone.')) {
       await deleteDoc(doc(db, 'listings', listing.id))
@@ -509,7 +604,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
         <h2 className="text-xl font-black text-gray-900">My Listings</h2>
         <p className="text-gray-400 text-sm">{myListings.length} propert{myListings.length !== 1 ? 'ies' : 'y'} listed</p>
       </div>
-
       {myListings.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <div className="text-5xl mb-3">🏠</div>
@@ -517,13 +611,11 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
           <p className="text-gray-400 text-sm">Add your first property to start earning</p>
         </div>
       )}
-
       {myListings.map(listing => {
         const imgs = Array.isArray(listing.images) ? listing.images.filter(img => typeof img === 'string' && img.trim().length > 0) : []
         const days = daysLeft(listing.createdAt)
         const expired = days === 0
         const isPending = listing.status === 'pending'
-
         return (
           <div key={listing.id} className={`bg-white rounded-2xl shadow-sm mb-4 border overflow-hidden ${expired ? 'border-red-200 opacity-60' : isPending ? 'border-yellow-200' : 'border-gray-100'}`}>
             {imgs.length > 0 ? (
@@ -536,17 +628,12 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
             <div className="p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-bold text-gray-900 flex-1 pr-2">{listing.title}</h3>
-                <span className={
-                  isPending ? 'bg-yellow-100 text-yellow-600 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0' :
-                  listing.status === 'taken' ? 'bg-red-100 text-red-600 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0' :
-                  'bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0'
-                }>
+                <span className={isPending ? 'bg-yellow-100 text-yellow-600 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0' : listing.status === 'taken' ? 'bg-red-100 text-red-600 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0' : 'bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium flex-shrink-0'}>
                   {isPending ? '⏳ Pending' : listing.status === 'taken' ? 'Taken' : 'Available'}
                 </span>
               </div>
               <p className="text-gray-400 text-sm mb-1">📍 {listing.location}</p>
               <p className="text-gray-700 font-bold text-sm mb-2">KES {Number(listing.price).toLocaleString()}{listing.type === 'airbnb' ? '/night' : '/month'}</p>
-
               {isPending && (
                 <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-2 mb-3">
                   <p className="text-yellow-700 text-xs font-medium">⏳ Awaiting payment verification — goes live within 30 min</p>
@@ -563,15 +650,8 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
                   <p className="text-gray-400 text-xs">⏳ {days} day{days !== 1 ? 's' : ''} remaining</p>
                 </div>
               )}
-
               <div className="flex gap-2">
-                <button
-                  onClick={() => toggleStatus(listing)}
-                  disabled={expired || isPending}
-                  className={listing.status === 'taken'
-                    ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200 disabled:opacity-40'
-                    : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200 disabled:opacity-40'
-                  }>
+                <button onClick={() => toggleStatus(listing)} disabled={expired || isPending} className={listing.status === 'taken' ? 'flex-1 bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium border border-green-200 disabled:opacity-40' : 'flex-1 bg-red-50 text-red-600 py-2 rounded-xl text-sm font-medium border border-red-200 disabled:opacity-40'}>
                   {listing.status === 'taken' ? '✅ Mark Available' : '❌ Mark Taken'}
                 </button>
                 <button onClick={() => deleteListing(listing)} className="px-4 bg-gray-50 text-gray-400 py-2 rounded-xl text-sm border border-gray-200 hover:bg-red-50 hover:text-red-400 transition-colors">🗑</button>
@@ -580,8 +660,6 @@ function LandlordDashboard({ user, allListings, onUpdate }) {
           </div>
         )
       })}
-
-      {/* Support button at bottom of dashboard */}
       {myListings.length > 0 && (
         <a href={waSupport} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full bg-green-50 border border-green-100 text-green-700 py-3 rounded-2xl text-sm font-medium mt-2">
           💬 Need help? Chat with Kodi254 support
@@ -604,13 +682,8 @@ function AuthPage({ onAuth }) {
   const handleSubmit = async () => {
     setError(''); setSuccess(''); setLoading(true)
     try {
-      if (mode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password)
-        onAuth()
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password)
-        onAuth()
-      }
+      if (mode === 'login') { await signInWithEmailAndPassword(auth, email, password); onAuth() }
+      else { await createUserWithEmailAndPassword(auth, email, password); onAuth() }
     } catch (e) { setError(e.message.replace('Firebase: ', '')) }
     setLoading(false)
   }
@@ -642,9 +715,7 @@ function AuthPage({ onAuth }) {
         {success && <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm">{success}</div>}
         <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-4 mb-3 focus:outline-none focus:border-green-300 bg-gray-50" placeholder="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} />
         <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-4 mb-2 focus:outline-none focus:border-green-300 bg-gray-50" placeholder="Password (min 6 characters)" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-        {mode === 'login' && (
-          <button onClick={() => setShowReset(true)} className="text-green-600 text-sm mb-4 block">Forgot password?</button>
-        )}
+        {mode === 'login' && <button onClick={() => setShowReset(true)} className="text-green-600 text-sm mb-4 block">Forgot password?</button>}
         {showReset && (
           <div className="bg-blue-50 rounded-xl p-3 mb-4">
             <p className="text-blue-700 text-sm mb-2">Enter your email above then click:</p>
@@ -660,7 +731,7 @@ function AuthPage({ onAuth }) {
 }
 
 // ── Home Page ─────────────────────────────────────────────────────────────────
-function HomePage({ listings, setPage, setFilter }) {
+function HomePage({ listings, setPage, setFilter, onShowTerms }) {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   const activeListings = listings.filter(l => l.status === 'available' && !isExpired(l.createdAt))
   const reviews = [
@@ -799,7 +870,8 @@ function HomePage({ listings, setPage, setFilter }) {
       <div className="bg-gray-900 text-white py-10 px-4 text-center">
         <p className="text-2xl font-black mb-1">Kodi254</p>
         <p className="text-gray-400 text-sm mb-1">Kenya's trusted property platform</p>
-        <p className="text-gray-500 text-xs mb-6">kodikenya254@gmail.com · 0724 380 481</p>
+        <p className="text-gray-500 text-xs mb-4">kodikenya254@gmail.com · 0724 380 481</p>
+        <button onClick={onShowTerms} className="text-gray-500 text-xs underline hover:text-gray-300 mb-6 block mx-auto">Terms & Conditions</button>
         <div className="border-t border-gray-800 pt-4 flex justify-center gap-6 text-gray-500 text-xs">
           <span>© 2026 Kodi254</span>
           <span>Made with ❤️ in Kenya</span>
@@ -826,6 +898,9 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [showLandlordPayment, setShowLandlordPayment] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
+  // Fix: mobile menu
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const amenityOptions = ['WiFi', 'Parking', 'Kitchen', 'TV', 'AC', 'Washer', 'Pool', 'Gym', 'Security', 'Water', 'Generator']
   const isAdmin = user?.email === ADMIN_EMAIL
@@ -853,7 +928,6 @@ export default function App() {
 
   const toggleAmenity = (a) => setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
 
-  // Fix: improved search using normalizeSearch for better partial matching
   const filtered = listings.filter(l => {
     if (l.status === 'pending') return false
     if (isExpired(l.createdAt)) return false
@@ -872,6 +946,8 @@ export default function App() {
     if (!form.title || !form.location || !form.price || !form.phone) { alert('Please fill all required fields!'); return }
     if (!isValidKenyanPhone(form.phone)) { alert('Enter a valid Kenyan WhatsApp number e.g. 0712 345 678'); return }
     if (parseInt(form.price) < 100) { alert('Price must be at least KES 100'); return }
+    const myPendingCount = listings.filter(l => l.landlordEmail === user?.email && l.status === 'pending').length
+    if (myPendingCount >= 3) { alert('You have too many pending listings. Wait for approval before submitting more.'); return }
     setShowLandlordPayment(true)
   }
 
@@ -910,10 +986,7 @@ export default function App() {
       setAmenities([]); setImages([]); setPreviews([]); setUploadProgress('')
       setSubmitted(true)
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
-    } catch (e) {
-      alert('Error: ' + e.message)
-      console.error(e)
-    }
+    } catch (e) { alert('Error: ' + e.message); console.error(e) }
     setSubmitting(false)
   }
 
@@ -921,13 +994,8 @@ export default function App() {
     if (target === 'admin' && !isAdmin) return
     if ((target === 'dashboard' || target === 'list') && !user) { setPage('auth'); return }
     setPage(target)
+    setMobileMenuOpen(false)
   }
-
-  const navBtn = (target, label) => (
-    <button onClick={() => navigateTo(target)} className={page === target ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600 transition-colors'}>
-      {label}
-    </button>
-  )
 
   if (!authChecked) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -937,28 +1005,62 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showTerms && <TermsPage onClose={() => setShowTerms(false)} />}
       {showLandlordPayment && <LandlordPaymentModal listingType={form.type} formData={form} onSuccess={submitListing} onClose={() => setShowLandlordPayment(false)} />}
 
+      {/* Fix: responsive navbar */}
       <div className="bg-green-700 text-white px-4 py-3 shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button onClick={() => setPage('home')} className="font-black text-xl">Kodi<span className="text-green-300">254</span></button>
-          <div className="flex gap-1 items-center">
-            {navBtn('search', 'Search')}
+
+          {/* Desktop nav */}
+          <div className="hidden sm:flex gap-1 items-center">
+            <button onClick={() => navigateTo('search')} className={page === 'search' ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600'}>Search</button>
             {user ? (
               <>
-                {isAdmin && navBtn('admin', '⚙️ Admin')}
-                {navBtn('dashboard', 'My Listings')}
-                {navBtn('list', '+ Add')}
+                {isAdmin && <button onClick={() => navigateTo('admin')} className={page === 'admin' ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600'}>⚙️ Admin</button>}
+                <button onClick={() => navigateTo('dashboard')} className={page === 'dashboard' ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600'}>My Listings</button>
+                <button onClick={() => navigateTo('list')} className={page === 'list' ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700' : 'px-4 py-2 rounded-xl text-sm font-medium text-green-100 hover:bg-green-600'}>+ Add</button>
                 <button onClick={() => signOut(auth)} className="px-3 py-2 rounded-xl text-sm font-medium bg-green-800 text-green-200 ml-1 hover:bg-green-900">Exit</button>
               </>
             ) : (
               <button onClick={() => setPage('auth')} className="px-4 py-2 rounded-xl text-sm font-bold bg-white text-green-700 ml-2">Landlord Login</button>
             )}
           </div>
+
+          {/* Mobile nav — hamburger */}
+          <div className="flex sm:hidden items-center gap-2">
+            <button onClick={() => navigateTo('search')} className="px-3 py-2 rounded-xl text-sm font-bold bg-white text-green-700">Search</button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="w-9 h-9 bg-green-600 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-green-500">
+              <span className="w-4 h-0.5 bg-white rounded"></span>
+              <span className="w-4 h-0.5 bg-white rounded"></span>
+              <span className="w-4 h-0.5 bg-white rounded"></span>
+            </button>
+          </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden mt-2 bg-green-800 rounded-2xl p-3 space-y-1">
+            {user ? (
+              <>
+                {isAdmin && (
+                  <button onClick={() => navigateTo('admin')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">⚙️ Admin Panel</button>
+                )}
+                <button onClick={() => navigateTo('dashboard')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">🏠 My Listings</button>
+                <button onClick={() => navigateTo('list')} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-100 hover:bg-green-700">+ Add Listing</button>
+                <div className="border-t border-green-700 pt-1 mt-1">
+                  <button onClick={() => { signOut(auth); setMobileMenuOpen(false) }} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-green-300 hover:bg-green-700">Exit / Logout</button>
+                </div>
+              </>
+            ) : (
+              <button onClick={() => { setPage('auth'); setMobileMenuOpen(false) }} className="w-full text-left px-4 py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-500">Landlord Login →</button>
+            )}
+          </div>
+        )}
       </div>
 
-      {page === 'home' && <HomePage listings={listings} setPage={setPage} setFilter={setFilter} />}
+      {page === 'home' && <HomePage listings={listings} setPage={setPage} setFilter={setFilter} onShowTerms={() => setShowTerms(true)} />}
       {page === 'auth' && <AuthPage onAuth={() => setPage('dashboard')} />}
       {page === 'admin' && <div className="max-w-2xl mx-auto p-4"><AdminPanel user={user} allListings={listings} onUpdate={fetchListings} /></div>}
       {page === 'dashboard' && user && <div className="max-w-2xl mx-auto p-4"><LandlordDashboard user={user} allListings={listings} onUpdate={fetchListings} /></div>}
@@ -976,13 +1078,24 @@ export default function App() {
               <button key={val} onClick={() => setFilter(val)} className={filter === val ? (val === 'airbnb' ? 'px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold' : 'px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-bold') : 'px-4 py-2 rounded-xl bg-white text-gray-500 text-sm border border-gray-200'}>{label}</button>
             ))}
           </div>
+
+          {/* Fix: skeleton loader instead of blank screen */}
           {loading ? (
-            <div className="text-center py-16"><div className="text-4xl mb-3">🏠</div><p className="text-gray-400 text-sm">Loading properties...</p></div>
+            <div>
+              <div className="h-4 bg-gray-200 rounded w-24 mb-4 animate-pulse" />
+              {[1, 2, 3].map(i => <ListingSkeleton key={i} />)}
+            </div>
           ) : (
             <div>
               <p className="text-gray-400 text-xs mb-4">{filtered.length} propert{filtered.length !== 1 ? 'ies' : 'y'} found</p>
               {filtered.map(listing => <ListingCard key={listing.id} listing={listing} />)}
-              {filtered.length === 0 && <div className="text-center py-16"><div className="text-4xl mb-3">🔍</div><p className="text-gray-700 font-medium">No properties found</p><p className="text-gray-400 text-sm mt-1">Try a different town or area name</p></div>}
+              {filtered.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="text-4xl mb-3">🔍</div>
+                  <p className="text-gray-700 font-medium">No properties found</p>
+                  <p className="text-gray-400 text-sm mt-1">Try a different town or area name</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1004,27 +1117,19 @@ export default function App() {
               <span>💡</span>
               <p className="text-amber-700 text-sm"><strong>Listing fee:</strong> {form.type === 'airbnb' ? 'KES 500' : 'KES 300'} · M-Pesa · 30 days · Goes live after verification</p>
             </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 font-semibold text-sm mb-2">Property title</label>
-              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Spacious 2 Bedroom in Kisii Town" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 font-semibold text-sm mb-2">Town / Area</label>
-              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Kilimani, Nairobi" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 font-semibold text-sm mb-2">Street Address <span className="text-gray-400 font-normal">(for accurate map pin)</span></label>
-              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. Lumumba Drive, House No. 12" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 font-semibold text-sm mb-2">{form.type === 'airbnb' ? 'Price per night (KES)' : 'Rent per month (KES)'}</label>
-              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. 8000" type="number" min="100" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 font-semibold text-sm mb-2">Your WhatsApp number</label>
-              <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder="e.g. 0712 345 678" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-              <p className="text-gray-400 text-xs mt-1">Safaricom number starting with 07 or 01</p>
-            </div>
+            {[
+              ['Property title', 'title', 'text', 'e.g. Spacious 2 Bedroom in Kisii Town'],
+              ['Town / Area', 'location', 'text', 'e.g. Kilimani, Nairobi'],
+              ['Street Address (for accurate map pin)', 'address', 'text', 'e.g. Lumumba Drive, House No. 12'],
+              [form.type === 'airbnb' ? 'Price per night (KES)' : 'Rent per month (KES)', 'price', 'number', 'e.g. 8000'],
+              ['Your WhatsApp number', 'phone', 'tel', 'e.g. 0712 345 678'],
+            ].map(([label, field, type, placeholder]) => (
+              <div key={field} className="mb-4">
+                <label className="block text-gray-600 font-semibold text-sm mb-2">{label}</label>
+                <input className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" placeholder={placeholder} type={type} min={type === 'number' ? '100' : undefined} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} />
+                {field === 'phone' && <p className="text-gray-400 text-xs mt-1">Safaricom number starting with 07 or 01</p>}
+              </div>
+            ))}
             <div className="mb-4">
               <label className="block text-gray-600 font-semibold text-sm mb-2">Bedrooms</label>
               <select className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3 focus:outline-none focus:border-green-300 bg-gray-50 text-sm" value={form.bedrooms} onChange={e => setForm({ ...form, bedrooms: e.target.value })}>
@@ -1065,6 +1170,9 @@ export default function App() {
             <button onClick={handleSubmit} disabled={submitting} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-black text-base disabled:opacity-50 transition-all active:scale-95">
               {submitting ? '⏳ Please wait...' : `Continue to Payment · KES ${form.type === 'airbnb' ? '500' : '300'} →`}
             </button>
+            <p className="text-center text-xs mt-3">
+              By submitting, you agree to our <button onClick={() => setShowTerms(true)} className="text-green-600 underline">Terms & Conditions</button>
+            </p>
           </div>
         </div>
       )}
