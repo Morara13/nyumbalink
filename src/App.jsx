@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { db } from './firebase'
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth'
 import { collection, addDoc, getDocs, orderBy, query, updateDoc, deleteDoc, doc } from 'firebase/firestore'
@@ -15,6 +15,10 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg
 function isValidKenyanPhone(phone) {
   const cleaned = phone.replace(/\s+/g, '')
   return /^(07|01)\d{8}$/.test(cleaned)
+}
+
+function isValidMpesaCode(code) {
+  return /^[A-Z0-9]{10}$/.test(code)
 }
 
 function sanitize(str) {
@@ -45,7 +49,6 @@ function normalizeSearch(str) {
   return String(str || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
 }
 
-// ── Dynamic page title for SEO ────────────────────────────────────────────────
 function usePageTitle(page) {
   useEffect(() => {
     const titles = {
@@ -55,7 +58,6 @@ function usePageTitle(page) {
       dashboard: 'My Listings — Kodi254',
       admin: 'Admin Panel — Kodi254',
       auth: 'Landlord Login — Kodi254',
-      terms: 'Terms & Conditions — Kodi254',
     }
     document.title = titles[page] || 'Kodi254 — Find Houses & Rentals in Kenya'
   }, [page])
@@ -105,7 +107,7 @@ function ListingSkeleton() {
   )
 }
 
-// ── 404 Not Found Page ────────────────────────────────────────────────────────
+// ── 404 Page ──────────────────────────────────────────────────────────────────
 function NotFoundPage({ onGoHome }) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -114,21 +116,8 @@ function NotFoundPage({ onGoHome }) {
         <h1 className="text-3xl font-black text-gray-900 mb-3">Page Not Found</h1>
         <p className="text-gray-500 mb-2">Looks like this page packed up and moved.</p>
         <p className="text-gray-400 text-sm mb-8">The page you are looking for does not exist or has been moved.</p>
-        <button
-          onClick={onGoHome}
-          className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all active:scale-95 w-full"
-        >
-          🏠 Back to Home
-        </button>
-        
-          <a 
-          href="https://wa.me/254724380481"
-          target="_blank"
-          rel="noreferrer"
-          className="block mt-3 text-green-600 text-sm underline"
-        >
-          Need help? Chat with us on WhatsApp
-        </a>
+        <button onClick={onGoHome} className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all w-full mb-3">🏠 Back to Home</button>
+        <a href="https://wa.me/254724380481" target="_blank" rel="noreferrer" className="text-green-600 text-sm underline">Need help? Chat with us on WhatsApp</a>
       </div>
     </div>
   )
@@ -218,9 +207,15 @@ function PaymentModal({ listing, onClose }) {
   const [mpesaCode, setMpesaCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  // Fix: rate limit STK push
+  const [lastSent, setLastSent] = useState(0)
 
   const triggerSTK = async () => {
     if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
+    // Fix: 30 second cooldown between STK pushes
+    if (Date.now() - lastSent < 30000) {
+      setError('Please wait 30 seconds before requesting another prompt.'); return
+    }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/mpesa', {
@@ -229,15 +224,21 @@ function PaymentModal({ listing, onClose }) {
         body: JSON.stringify({ phone: phone.replace(/\s+/g, ''), amount: fee, reference: 'Kodi254 - ' + listing.title })
       })
       const data = await res.json()
-      if (data.success) { setStep(2) } else { setError(data.error || 'Payment failed. Try again.') }
+      if (data.success) { setStep(2); setLastSent(Date.now()) }
+      else { setError(data.error || 'Payment failed. Try again.') }
     } catch (e) { setError('Network error. Check your connection.') }
     setLoading(false)
   }
 
-  const waLink = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254, I paid KES ${fee} for *${listing.title}* in ${listing.location}. M-Pesa code: ${mpesaCode}. My number: ${phone}`
+  // Fix: encode WhatsApp URL properly
+  const waMessage = `Hi Kodi254, I paid KES ${fee} for *${listing.title}* in ${listing.location}. M-Pesa code: ${mpesaCode}. My number: ${phone}`
+  const waLink = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=${encodeURIComponent(waMessage)}`
 
   const handleSendProof = () => {
-    if (!mpesaCode || mpesaCode.length < 6) { setError('Please enter your M-Pesa confirmation code before sending'); return }
+    // Fix: validate real M-Pesa code format
+    if (!isValidMpesaCode(mpesaCode)) {
+      setError('Enter a valid 10-character M-Pesa code e.g. QGH7X8Y9Z0'); return
+    }
     setCodeSent(true); setError('')
   }
 
@@ -287,8 +288,14 @@ function PaymentModal({ listing, onClose }) {
                   <p className="text-amber-700 text-sm">Enter your M-Pesa confirmation code below, then send proof on WhatsApp.</p>
                 </div>
                 <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
-                <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }} maxLength={12} />
-                <p className="text-gray-400 text-xs mb-4">You will find this code in the M-Pesa SMS after paying</p>
+                <input
+                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-1 uppercase tracking-widest"
+                  placeholder="e.g. QGH7X8Y9Z0"
+                  value={mpesaCode}
+                  onChange={e => { setMpesaCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setError('') }}
+                  maxLength={10}
+                />
+                <p className="text-gray-400 text-xs mb-4">10-character code from your M-Pesa SMS e.g. QGH7X8Y9Z0</p>
                 {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
                 {!codeSent ? (
                   <button onClick={handleSendProof} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">✅ Confirm Payment Code</button>
@@ -324,9 +331,14 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
   const [error, setError] = useState('')
   const [mpesaCode, setMpesaCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
+  // Fix: rate limit STK push
+  const [lastSent, setLastSent] = useState(0)
 
   const triggerSTK = async () => {
     if (!isValidKenyanPhone(phone)) { setError('Enter a valid Kenyan number e.g. 0712 345 678'); return }
+    if (Date.now() - lastSent < 30000) {
+      setError('Please wait 30 seconds before requesting another prompt.'); return
+    }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/mpesa', {
@@ -335,15 +347,21 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
         body: JSON.stringify({ phone: phone.replace(/\s+/g, ''), amount: fee, reference: 'Kodi254 Listing Fee' })
       })
       const data = await res.json()
-      if (data.success) { setStep(2) } else { setError(data.error || 'Payment failed. Try again.') }
+      if (data.success) { setStep(2); setLastSent(Date.now()) }
+      else { setError(data.error || 'Payment failed. Try again.') }
     } catch (e) { setError('Network error. Check your connection.') }
     setLoading(false)
   }
 
-  const waLink = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254, I paid KES ${fee} listing fee for *${formData?.title}* in ${formData?.location}. M-Pesa code: ${mpesaCode}. My number: ${phone}`
+  // Fix: encode WhatsApp URL properly
+  const waMessage = `Hi Kodi254, I paid KES ${fee} listing fee for *${formData?.title}* in ${formData?.location}. M-Pesa code: ${mpesaCode}. My number: ${phone}`
+  const waLink = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=${encodeURIComponent(waMessage)}`
 
   const handleConfirmCode = () => {
-    if (!mpesaCode || mpesaCode.length < 6) { setError('Please enter your M-Pesa confirmation code'); return }
+    // Fix: validate real M-Pesa code format
+    if (!isValidMpesaCode(mpesaCode)) {
+      setError('Enter a valid 10-character M-Pesa code e.g. QGH7X8Y9Z0'); return
+    }
     setCodeSent(true); setError('')
   }
 
@@ -390,8 +408,14 @@ function LandlordPaymentModal({ listingType, formData, onSuccess, onClose }) {
                 <p className="text-amber-700 text-sm">Enter your M-Pesa code and send proof on WhatsApp. We approve your listing within 30 minutes.</p>
               </div>
               <label className="block text-gray-700 font-semibold mb-2 text-sm">M-Pesa Confirmation Code <span className="text-red-500">*</span></label>
-              <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-2 uppercase" placeholder="e.g. QGH7X8Y9Z0" value={mpesaCode} onChange={e => { setMpesaCode(e.target.value.toUpperCase()); setError('') }} maxLength={12} />
-              <p className="text-gray-400 text-xs mb-4">Check your M-Pesa SMS for this code</p>
+              <input
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg focus:outline-none focus:border-green-400 mb-1 uppercase tracking-widest"
+                placeholder="e.g. QGH7X8Y9Z0"
+                value={mpesaCode}
+                onChange={e => { setMpesaCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setError('') }}
+                maxLength={10}
+              />
+              <p className="text-gray-400 text-xs mb-4">10-character code from your M-Pesa SMS</p>
               {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
               {!codeSent ? (
                 <button onClick={handleConfirmCode} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg mb-3">✅ Confirm Payment Code</button>
@@ -611,7 +635,7 @@ function AdminPanel({ user, allListings, onUpdate }) {
 // ── Landlord Dashboard ────────────────────────────────────────────────────────
 function LandlordDashboard({ user, allListings, onUpdate }) {
   const myListings = allListings.filter(l => l.landlordEmail === user.email)
-  const waSupport = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=Hi Kodi254 support, I need help with my listing. My email: ${user.email}`
+  const waSupport = `https://wa.me/254${MPESA_NUMBER.substring(1)}?text=${encodeURIComponent(`Hi Kodi254 support, I need help with my listing. My email: ${user.email}`)}`
 
   const toggleStatus = async (listing) => {
     if (listing.landlordEmail !== user.email) { alert('Unauthorized action.'); return }
@@ -783,7 +807,6 @@ function HomePage({ listings, setPage, setFilter, onShowTerms }) {
           ))}
         </div>
       </div>
-
       <div id="hero" className="bg-green-700 text-white py-16 px-4 text-center">
         <p className="text-green-300 text-sm font-medium mb-3">🇰🇪 Kenya's Property Platform</p>
         <h1 className="text-4xl font-black mb-4 leading-tight">Find Your Perfect<br/>Home in Kenya</h1>
@@ -798,7 +821,6 @@ function HomePage({ listings, setPage, setFilter, onShowTerms }) {
           <div className="bg-white rounded-2xl p-4 shadow-md"><p className="text-2xl font-black text-green-700">47</p><p className="text-gray-600 text-xs font-medium mt-1">Counties</p></div>
         </div>
       </div>
-
       <div id="how" className="py-14 px-4 bg-white scroll-mt-32">
         <div className="max-w-2xl mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Simple & Fast</p>
@@ -823,7 +845,6 @@ function HomePage({ listings, setPage, setFilter, onShowTerms }) {
           </div>
         </div>
       </div>
-
       <div id="features" className="py-14 px-4 bg-gray-50 scroll-mt-32">
         <div className="max-w-2xl mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Why Us</p>
@@ -846,7 +867,6 @@ function HomePage({ listings, setPage, setFilter, onShowTerms }) {
           </div>
         </div>
       </div>
-
       <div id="contact" className="py-14 px-4 bg-white scroll-mt-32">
         <div className="max-w-md mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Get in Touch</p>
@@ -877,7 +897,6 @@ function HomePage({ listings, setPage, setFilter, onShowTerms }) {
           </div>
         </div>
       </div>
-
       <div id="reviews" className="py-14 px-4 bg-gray-50 scroll-mt-32">
         <div className="max-w-2xl mx-auto">
           <p className="text-green-600 font-semibold text-center text-sm mb-2">Real Stories</p>
@@ -899,7 +918,6 @@ function HomePage({ listings, setPage, setFilter, onShowTerms }) {
           </div>
         </div>
       </div>
-
       <div className="bg-gray-900 text-white py-10 px-4 text-center">
         <p className="text-2xl font-black mb-1">Kodi254</p>
         <p className="text-gray-400 text-sm mb-1">Kenya's trusted property platform</p>
@@ -933,13 +951,14 @@ export default function App() {
   const [showLandlordPayment, setShowLandlordPayment] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // Fix: double submit guard
+  const isSubmittingRef = useRef(false)
 
   const amenityOptions = ['WiFi', 'Parking', 'Kitchen', 'TV', 'AC', 'Washer', 'Pool', 'Gym', 'Security', 'Water', 'Generator']
   const isAdmin = user?.email === ADMIN_EMAIL
+  const KNOWN_PAGES = ['home', 'search', 'list', 'dashboard', 'admin', 'auth']
 
-  // Dynamic page titles for SEO
   usePageTitle(page)
-
   useEffect(() => { onAuthStateChanged(auth, (u) => { setUser(u); setAuthChecked(true) }) }, [])
 
   const fetchListings = async () => {
@@ -987,6 +1006,9 @@ export default function App() {
   }
 
   const submitListing = async () => {
+    // Fix: double submit guard
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setShowLandlordPayment(false)
     setSubmitting(true)
     try {
@@ -1023,6 +1045,7 @@ export default function App() {
       setTimeout(() => { setSubmitted(false); setPage('dashboard') }, 2000)
     } catch (e) { alert('Error: ' + e.message); console.error(e) }
     setSubmitting(false)
+    isSubmittingRef.current = false
   }
 
   const navigateTo = (target) => {
@@ -1031,8 +1054,6 @@ export default function App() {
     setPage(target)
     setMobileMenuOpen(false)
   }
-
-  const KNOWN_PAGES = ['home', 'search', 'list', 'dashboard', 'admin', 'auth']
 
   if (!authChecked) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -1091,7 +1112,7 @@ export default function App() {
         )}
       </div>
 
-      {/* 404 — unknown pages */}
+      {/* 404 */}
       {!KNOWN_PAGES.includes(page) && <NotFoundPage onGoHome={() => setPage('home')} />}
 
       {page === 'home' && <HomePage listings={listings} setPage={setPage} setFilter={setFilter} onShowTerms={() => setShowTerms(true)} />}
@@ -1105,7 +1126,14 @@ export default function App() {
           <h2 className="text-xl font-black text-gray-900 mb-4 mt-2">Find a Property</h2>
           <div className="relative mb-4">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-            <input className="w-full border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-green-300 bg-white text-sm" placeholder="Search by town, area or name..." value={search} onChange={e => setSearch(e.target.value)} />
+            {/* Fix: maxLength on search */}
+            <input
+              className="w-full border-2 border-gray-100 rounded-2xl pl-10 pr-4 py-3 focus:outline-none focus:border-green-300 bg-white text-sm"
+              placeholder="Search by town, area or name..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              maxLength={100}
+            />
           </div>
           <div className="flex gap-2 mb-5">
             {[['all', 'All'], ['rental', '🏠 Rentals'], ['airbnb', '🏨 Short Stay']].map(([val, label]) => (
